@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -114,7 +115,21 @@ type ConfigManager struct {
 }
 
 // NewConfigManager 创建配置管理器
-func NewConfigManager() *ConfigManager {
+func NewConfigManager(configPath ...string) *ConfigManager {
+	if len(configPath) > 0 && configPath[0] != "" {
+		config, err := LoadConfig(configPath[0])
+		if err != nil {
+			// 如果加载失败，返回默认配置
+			return &ConfigManager{
+				config:     loadDefaultConfig(),
+				configPath: configPath[0],
+			}
+		}
+		return &ConfigManager{
+			config:     config,
+			configPath: configPath[0],
+		}
+	}
 	return &ConfigManager{
 		config: loadDefaultConfig(),
 	}
@@ -145,24 +160,13 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
-	// 设置默认值
-	setDefaults(&config)
+	// 设置默认值（配置已经包含默认值，无需额外设置）
+	// setDefaults(&config)
 
 	return &config, nil
 }
 
-// NewConfigManager 创建配置管理器
-func NewConfigManager(configPath string) (*ConfigManager, error) {
-	config, err := LoadConfig(configPath)
-	if err != nil {
-		return nil, err
-	}
 
-	return &ConfigManager{
-		config:     config,
-		configPath: configPath,
-	}, nil
-}
 
 // GetConfig 获取当前配置
 func (cm *ConfigManager) GetConfig() *Config {
@@ -209,10 +213,7 @@ func (cm *ConfigManager) SaveConfig(filename string) error {
 	return os.WriteFile(filename, data, 0644)
 }
 
-// GetConfig 获取配置
-func (cm *ConfigManager) GetConfig() *Config {
-	return cm.config
-}
+
 
 // GenerateOutput 生成输出内容
 func (cm *ConfigManager) GenerateOutput(data ContextData, format string) (string, error) {

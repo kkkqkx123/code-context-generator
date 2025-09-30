@@ -12,8 +12,11 @@ import (
 )
 
 func main() {
-	// 创建示例配置
-	config := createSampleConfig()
+	// 创建配置管理器
+	cm := NewConfigManager()
+	
+	// 获取当前配置
+	config := cm.GetConfig()
 	
 	// 保存配置到文件
 	fmt.Println("保存配置到文件...")
@@ -33,12 +36,6 @@ func main() {
 	os.WriteFile("config.toml", buf.Bytes(), 0644)
 	
 	fmt.Println("配置文件已保存")
-	
-	// 创建配置管理器
-	cm, err := NewConfigManager("config.yaml")
-	if err != nil {
-		log.Fatalf("创建配置管理器失败: %v", err)
-	}
 	
 	// 演示配置加载
 	fmt.Println("\n=== 加载YAML配置 ===")
@@ -72,7 +69,33 @@ func main() {
 	
 	// 演示输出生成
 	fmt.Println("\n=== 生成XML输出 ===")
-	xmlOutput, err := cm.GenerateXMLOutput(sampleFiles, sampleFolders)
+	// 创建示例数据
+	sampleData := ContextData{
+		Files: []FileInfo{
+			{
+				Name:    "example.go",
+				Path:    "example.go",
+				Content: "package main\n\nfunc main() {\n    fmt.Println(\"Hello World\")\n}",
+				Size:    42,
+			},
+		},
+		Folders: []FolderInfo{
+			{
+				Name: "src",
+				Path: "src",
+				Files: []FileInfo{
+					{
+						Name:    "main.go",
+						Path:    "src/main.go",
+						Content: "package main",
+						Size:    12,
+					},
+				},
+			},
+		},
+	}
+	
+	xmlOutput, err := cm.GenerateOutput(sampleData, "xml")
 	if err != nil {
 		log.Printf("XML输出生成失败: %v", err)
 	} else {
@@ -80,7 +103,7 @@ func main() {
 	}
 	
 	fmt.Println("\n=== 生成JSON输出 ===")
-	jsonOutput, err := cm.GenerateJSONOutput(sampleFiles, sampleFolders)
+	jsonOutput, err := cm.GenerateOutput(sampleData, "json")
 	if err != nil {
 		log.Printf("JSON输出生成失败: %v", err)
 	} else {
@@ -88,7 +111,7 @@ func main() {
 	}
 	
 	fmt.Println("\n=== 生成Markdown输出 ===")
-	mdOutput, err := cm.GenerateMarkdownOutput(sampleFiles, sampleFolders)
+	mdOutput, err := cm.GenerateOutput(sampleData, "markdown")
 	if err != nil {
 		log.Printf("Markdown输出生成失败: %v", err)
 	} else {

@@ -1,138 +1,88 @@
-# 统一配置文件 - 支持多种输出格式
 formats:
   xml:
     enabled: true
     structure:
-      root: "context"
-      file: "file"
-      folder: "folder"
-      files: "files"
+      file: file
+      files: files
+      folder: folder
+      root: context
     fields:
-      path: "path"
-      content: "content"
-      filename: "filename"
-    template: |
-      <{{.root}}>
-        {{range .files}}<{{$.file}}>
-          <{{$.path}}>{{.Path}}</{{$.path}}>
-          <{{$.content}}>{{.Content}}</{{$.content}}>
-        </{{$.file}}>
-        {{end}}
-        {{range .folders}}<{{$.folder}}>
-          <{{$.path}}>{{.Path}}</{{$.path}}>
-          <{{$.files}}>
-            {{range .Files}}<{{$.file}}>
-              <{{$.filename}}>{{.Name}}</{{$.filename}}>
-              <{{$.path}}>{{.Path}}</{{$.path}}>
-              <{{$.content}}>{{.Content}}</{{$.content}}>
-            </{{$.file}}>{{end}}
-          </{{$.files}}>
-        </{{$.folder}}>{{end}}
-      </{{$.root}}>
-
+      content: content
+      filename: filename
+      path: path
+    template: ""
+    formatting: {}
   json:
     enabled: true
     structure:
-      root: null
-      file: "file"
-      folder: "folder"
-      files: "files"
+      file: file
+      folder: folder
     fields:
-      path: "path"
-      content: "content"
-      filename: "filename"
-    formatting:
-      indent: "  "
-      sort_keys: false
-
+      content: content
+      filename: filename
+      path: path
+    template: ""
+    formatting: {}
   toml:
     enabled: true
     structure:
-      file_section: "file"
-      folder_section: "folder"
+      file_section: file
+      folder_section: folder
     fields:
-      path: "path"
-      content: "content"
-      filename: "filename"
-
+      content: content
+      filename: filename
+      path: path
+    template: ""
+    formatting: {}
   markdown:
     enabled: true
     structure:
+      code_block: "```"
       file_header: "##"
       folder_header: "###"
-      code_block: "```"
     fields:
-      path: null  # 在markdown中path通常作为标题
-      content: null  # content直接作为代码块内容
+      content: ""
+      path: ""
+    template: ""
     formatting:
-      separator: "\n\n"
       add_toc: false
-      code_language: true  # 自动检测代码语言
+      code_language: true
+      separator: |+
+        
 
-# 通用字段配置
 fields:
-  # 可以自定义字段名称
   custom_names:
-    filepath: "path"
-    filecontent: "content"
-    filename: "name"
-  
-  # 字段过滤
+    filecontent: content
+    filename: name
+    filepath: path
   filter:
-    include: []  # 只包含这些字段，空数组表示包含所有
-    exclude: []  # 排除这些字段
-  
-  # 内容处理
+    include: []
+    exclude: []
   processing:
-    max_length: 0  # 0表示不限制
+    max_length: 0
     add_line_numbers: false
     trim_whitespace: true
     code_highlight: false
-
-# 文件过滤配置
 filters:
-  # 文件大小限制
-  max_file_size: "10MB"
-  
-  # 排除模式（支持glob模式）
+  max_file_size: 10MB
   exclude_patterns:
-    - "*.tmp"
-    - "*.log"
-    - "*.swp"
-    - ".*"  # 隐藏文件
-  
-  # 包含模式（优先级高于排除）
+  - "*.tmp"
+  - "*.log"
+  - "*.swp"
+  - .*
   include_patterns: []
-  
-  # 递归深度，0表示无限制
   max_depth: 0
-  
-  # 是否跟随符号链接
   follow_symlinks: false
-
-# 输出配置
 output:
-  # 默认输出格式
-  default_format: "xml"
-  
-  # 输出目录，空表示当前目录
+  default_format: xml
   output_dir: ""
-  
-  # 文件名模板
-  filename_template: "context_{{.timestamp}}.{{.extension}}"
-  
-  # 时间戳格式
+  filename_template: context_{{.timestamp}}.{{.extension}}
   timestamp_format: "20060102_150405"
-
-# 界面配置
 ui:
-  # 交互式选择器配置
   selector:
     show_hidden: false
     show_size: true
     show_modified: false
-    
-  # 自动补全配置
   autocomplete:
     enabled: true
     min_chars: 1
