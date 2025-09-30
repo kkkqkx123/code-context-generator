@@ -108,7 +108,9 @@ type ContextData struct {
 
 // ConfigManager 配置管理器
 type ConfigManager struct {
-	config *Config
+	config     *Config
+	mu         sync.RWMutex
+	configPath string // 配置文件路径
 }
 
 // NewConfigManager 创建配置管理器
@@ -119,28 +121,67 @@ func NewConfigManager() *ConfigManager {
 }
 
 // LoadConfig 从文件加载配置
-func (cm *ConfigManager) LoadConfig(filename string) error {
+func LoadConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return fmt.Errorf("读取配置文件失败: %w", err)
+		return nil, fmt.Errorf("读取配置文件失败: %w", err)
 	}
 
-	ext := strings.ToLower(filepath.Ext(filename))
-	switch ext {
+	var config Config
+
+	// 根据文件扩展名选择解析器
+	switch ext := strings.ToLower(filepath.Ext(filename)); ext {
 	case ".yaml", ".yml":
-		err = yaml.Unmarshal(data, cm.config)
+		err = yaml.Unmarshal(data, &config)
 	case ".json":
-		err = json.Unmarshal(data, cm.config)
+		err = json.Unmarshal(data, &config)
 	case ".toml":
-		err = toml.Unmarshal(data, cm.config)
+		err = toml.Unmarshal(data, &config)
 	default:
-		return fmt.Errorf("不支持的配置文件格式: %s", ext)
+		return nil, fmt.Errorf("不支持的配置文件格式: %s", ext)
 	}
 
 	if err != nil {
-		return fmt.Errorf("解析配置文件失败: %w", err)
+		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
+	// 设置默认值
+	setDefaults(&config)
+
+	return &config, nil
+}
+
+// NewConfigManager 创建配置管理器
+func NewConfigManager(configPath string) (*ConfigManager, error) {
+	config, err := LoadConfig(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ConfigManager{
+		config:     config,
+		configPath: configPath,
+	}, nil
+}
+
+// GetConfig 获取当前配置
+func (cm *ConfigManager) GetConfig() *Config {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return cm.config
+}
+
+// Reload 重新加载配置
+func (cm *ConfigManager) Reload() error {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	config, err := LoadConfig(cm.configPath)
+	if err != nil {
+		return err
+	}
+
+	cm.config = config
 	return nil
 }
 
