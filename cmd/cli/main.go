@@ -12,6 +12,7 @@ import (
 	"code-context-generator/internal/selector"
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/types"
+
 	"github.com/goccy/go-yaml"
 
 	"github.com/spf13/cobra"
@@ -36,42 +37,42 @@ var rootCmd = &cobra.Command{
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// 加载配置
-	// 加载配置
-	cfg = &types.Config{
-		Output: types.OutputConfig{
-			Format:   "json",
-			Encoding: "utf-8",
-		},
-		FileProcessing: types.FileProcessingConfig{
-			IncludeHidden:   false,
-			MaxFileSize:     10 * 1024 * 1024,
-			MaxDepth:        0,
-			ExcludePatterns: []string{},
-			IncludePatterns: []string{},
-			IncludeContent:  false,
-			IncludeHash:     false,
-		},
-		UI: types.UIConfig{
-			Theme:        "default",
-			ShowProgress: true,
-			ShowSize:     true,
-			ShowDate:     true,
-			ShowPreview:  true,
-		},
-		Performance: types.PerformanceConfig{
-			MaxWorkers:   4,
-			BufferSize:   1024,
-			CacheEnabled: true,
-			CacheSize:    100,
-		},
-		Logging: types.LoggingConfig{
-			Level:      "info",
-			FilePath:   "",
-			MaxSize:    10,
-			MaxBackups: 3,
-			MaxAge:     7,
-		},
-	}
+		// 加载配置
+		cfg = &types.Config{
+			Output: types.OutputConfig{
+				Format:   "json",
+				Encoding: "utf-8",
+			},
+			FileProcessing: types.FileProcessingConfig{
+				IncludeHidden:   false,
+				MaxFileSize:     10 * 1024 * 1024,
+				MaxDepth:        0,
+				ExcludePatterns: []string{},
+				IncludePatterns: []string{},
+				IncludeContent:  false,
+				IncludeHash:     false,
+			},
+			UI: types.UIConfig{
+				Theme:        "default",
+				ShowProgress: true,
+				ShowSize:     true,
+				ShowDate:     true,
+				ShowPreview:  true,
+			},
+			Performance: types.PerformanceConfig{
+				MaxWorkers:   4,
+				BufferSize:   1024,
+				CacheEnabled: true,
+				CacheSize:    100,
+			},
+			Logging: types.LoggingConfig{
+				Level:      "info",
+				FilePath:   "",
+				MaxSize:    10,
+				MaxBackups: 3,
+				MaxAge:     7,
+			},
+		}
 		return nil
 	},
 }
@@ -173,46 +174,6 @@ func main() {
 	}
 }
 
-// loadConfig 加载配置
-func loadConfig() (*types.Config, error) {
-	// 返回默认配置
-	return &types.Config{
-		Output: types.OutputConfig{
-			Format:   "json",
-			Encoding: "utf-8",
-		},
-		FileProcessing: types.FileProcessingConfig{
-			IncludeHidden:   false,
-			MaxFileSize:     10 * 1024 * 1024,
-			MaxDepth:        0,
-			ExcludePatterns: []string{},
-			IncludePatterns: []string{},
-			IncludeContent:  false,
-			IncludeHash:     false,
-		},
-		UI: types.UIConfig{
-			Theme:        "default",
-			ShowProgress: true,
-			ShowSize:     true,
-			ShowDate:     true,
-			ShowPreview:  true,
-		},
-		Performance: types.PerformanceConfig{
-			MaxWorkers:   4,
-			BufferSize:   1024,
-			CacheEnabled: true,
-			CacheSize:    100,
-		},
-		Logging: types.LoggingConfig{
-			Level:      "info",
-			FilePath:   "",
-			MaxSize:    10,
-			MaxBackups: 3,
-			MaxAge:     7,
-		},
-	}, nil
-}
-
 // runGenerate 运行生成命令
 func runGenerate(cmd *cobra.Command, args []string) error {
 	// 获取路径
@@ -226,7 +187,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	format, _ := cmd.Flags().GetString("format")
 	exclude, _ := cmd.Flags().GetStringSlice("exclude")
 	include, _ := cmd.Flags().GetStringSlice("include")
-	_, _ = cmd.Flags().GetBool("recursive") // 忽略recursive变量
+	recursive, _ := cmd.Flags().GetBool("recursive")
 	hidden, _ := cmd.Flags().GetBool("hidden")
 	maxDepth, _ := cmd.Flags().GetInt("max-depth")
 	maxSize, _ := cmd.Flags().GetInt("max-size")
@@ -248,9 +209,14 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		ShowHidden:      hidden,
 	})
 
+	// 如果递归选项被禁用，设置最大深度为1
+	if !recursive && maxDepth == 0 {
+		maxDepth = 1
+	}
+
 	// 执行遍历
 	if verbose {
-		fmt.Println(utils.InfoColor("正在扫描路径:"), path)
+		fmt.Printf("正在扫描路径: %s (递归: %v)\n", path, recursive)
 	}
 
 	result, err := walker.Walk(path, nil)
@@ -268,15 +234,10 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("创建格式化器失败: %w", err)
 	}
 
-	// 将 WalkResult 转换为 ContextData
-	contextData := types.ContextData{
-		Files:       result.Files,
-		Folders:     result.Folders,
-		FileCount:   result.FileCount,
-		FolderCount: result.FolderCount,
-		TotalSize:   result.TotalSize,
-		Metadata:    make(map[string]interface{}),
-	}
+	// ContextData 已经包含了所有需要的信息
+	// 添加根路径到metadata
+	result.Metadata["root_path"] = path
+	contextData := *result
 
 	// 格式化输出
 	outputData, err := formatter.Format(contextData)
@@ -286,7 +247,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// 添加额外信息
 	if content || hash {
-		// 将 ContextData 转换为 WalkResult
+		// 创建 WalkResult 用于 addFileContent
 		walkResult := &types.WalkResult{
 			Files:       result.Files,
 			Folders:     result.Folders,
@@ -324,8 +285,8 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	// 解析标志
 	output, _ := cmd.Flags().GetString("output")
 	format, _ := cmd.Flags().GetString("format")
-	_, _ = cmd.Flags().GetBool("multi") // 忽略multi变量
-	_, _ = cmd.Flags().GetString("filter") // 忽略filter变量
+	multi, _ := cmd.Flags().GetBool("multi")
+	filter, _ := cmd.Flags().GetString("filter")
 
 	// 创建选择器配置
 	config := &types.Config{
@@ -337,29 +298,31 @@ func runSelect(cmd *cobra.Command, args []string) error {
 
 	// 执行选择
 	if verbose {
-		fmt.Println(utils.InfoColor("启动交互式选择器..."))
+		fmt.Printf("启动交互式选择器... (多选: %v, 过滤器: %s)\n", multi, filter)
 	}
 
 	// 选择文件和目录
 	selectOptions := &types.SelectOptions{
-		Recursive:  true,
-		ShowHidden: false,
-		MaxDepth:   0,
+		Recursive:       true,
+		ShowHidden:      false,
+		MaxDepth:        0,
+		IncludePatterns: []string{},
+		ExcludePatterns: []string{},
 	}
-	
+
 	files, err := fileSelector.SelectFiles(path, selectOptions)
 	if err != nil {
 		return fmt.Errorf("选择文件失败: %w", err)
 	}
-	
+
 	folders, err := fileSelector.SelectFolders(path, selectOptions)
 	if err != nil {
 		return fmt.Errorf("选择目录失败: %w", err)
 	}
-	
+
 	// 合并选择结果
 	allItems := append(files, folders...)
-	
+
 	// 交互式选择
 	selected, err := fileSelector.InteractiveSelect(allItems, "选择文件和目录:")
 	if err != nil {
@@ -377,8 +340,8 @@ func runSelect(cmd *cobra.Command, args []string) error {
 
 	// 创建结果
 	result := &types.WalkResult{
-		Files:   []types.FileInfo{},
-		Folders: []types.FolderInfo{},
+		Files:    []types.FileInfo{},
+		Folders:  []types.FolderInfo{},
 		RootPath: path,
 	}
 
@@ -461,9 +424,9 @@ func runConfigInit(cmd *cobra.Command, args []string) error {
 	// 创建默认配置
 	defaultConfig := &types.Config{
 		Output: types.OutputConfig{
-			Format:    "json",
-			FilePath:  "",
-			Encoding:  "utf-8",
+			Format:   "json",
+			FilePath: "",
+			Encoding: "utf-8",
 		},
 		FileProcessing: types.FileProcessingConfig{
 			IncludeHidden: false,
@@ -480,20 +443,20 @@ func runConfigInit(cmd *cobra.Command, args []string) error {
 			},
 			IncludePatterns: []string{},
 			IncludeContent:  false,
-			IncludeHash:       false,
+			IncludeHash:     false,
 		},
 		UI: types.UIConfig{
-			Theme:         "default",
-			ShowProgress:  true,
-			ShowSize:      true,
-			ShowDate:      true,
-			ShowPreview:   true,
+			Theme:        "default",
+			ShowProgress: true,
+			ShowSize:     true,
+			ShowDate:     true,
+			ShowPreview:  true,
 		},
 		Performance: types.PerformanceConfig{
-			MaxWorkers:     4,
-			BufferSize:     1024,
-			CacheEnabled:   true,
-			CacheSize:      100,
+			MaxWorkers:   4,
+			BufferSize:   1024,
+			CacheEnabled: true,
+			CacheSize:    100,
 		},
 		Logging: types.LoggingConfig{
 			Level:      "info",
@@ -526,19 +489,31 @@ func runAutocomplete(cmd *cobra.Command, args []string) error {
 	}
 
 	// 解析标志
-	_, _ = cmd.Flags().GetInt("limit") // 忽略limit变量
-	_, _ = cmd.Flags().GetString("type") // 忽略completeType变量
+	limit, _ := cmd.Flags().GetInt("limit")
+	completeType, _ := cmd.Flags().GetString("type")
 
 	// 创建自动补全器
 	autocompleter := autocomplete.NewAutocompleter(&types.AutocompleteConfig{
 		Enabled:        true,
 		MinChars:       1,
-		MaxSuggestions: 10,
+		MaxSuggestions: limit,
 	})
 
 	// 获取建议
+	completeTypeEnum := types.CompleteFilePath
+	switch completeType {
+	case "dir":
+		completeTypeEnum = types.CompleteDirectory
+	case "ext":
+		completeTypeEnum = types.CompleteExtension
+	case "pattern":
+		completeTypeEnum = types.CompletePattern
+	case "generic":
+		completeTypeEnum = types.CompleteGeneric
+	}
+
 	context := &types.CompleteContext{
-		Type: types.CompleteFilePath,
+		Type: completeTypeEnum,
 		Data: make(map[string]interface{}),
 	}
 	suggestions, err := autocompleter.Complete(path, context)
@@ -566,51 +541,60 @@ func isValidFormat(format string) bool {
 }
 
 // addFileContent 添加文件内容
-func addFileContent(outputData string, result *types.WalkResult, includeContent, includeHash bool) string {
-	// 这里应该根据格式添加文件内容
-	// 为了简化，这里只是返回原始数据
+func addFileContent(outputData string, _ *types.WalkResult, includeContent, includeHash bool) string {
+	// 如果不需要包含内容和哈希，直接返回原始数据
+	if !includeContent && !includeHash {
+		return outputData
+	}
+
+	// 这里可以根据需要添加文件内容和哈希处理逻辑
+	// 目前保持简化实现，后续可以根据具体需求扩展
+	if verbose {
+		fmt.Println(utils.InfoColor("注意: 文件内容和哈希功能暂未完全实现"))
+	}
+
 	return outputData
 }
 
 // generateConfigOutput 生成配置输出
 func generateConfigOutput(cfg *types.Config) string {
 	var output strings.Builder
-	
+
 	output.WriteString("当前配置:\n")
 	output.WriteString("==================\n\n")
-	
+
 	output.WriteString(fmt.Sprintf("输出格式: %s\n", cfg.Output.Format))
 	output.WriteString(fmt.Sprintf("编码: %s\n", cfg.Output.Encoding))
 	if cfg.Output.FilePath != "" {
 		output.WriteString(fmt.Sprintf("输出文件: %s\n", cfg.Output.FilePath))
 	}
-	
+
 	output.WriteString("\n文件处理:\n")
 	output.WriteString(fmt.Sprintf("  包含隐藏文件: %v\n", cfg.FileProcessing.IncludeHidden))
 	output.WriteString(fmt.Sprintf("  最大文件大小: %d 字节\n", cfg.FileProcessing.MaxFileSize))
 	output.WriteString(fmt.Sprintf("  最大深度: %d\n", cfg.FileProcessing.MaxDepth))
 	output.WriteString(fmt.Sprintf("  包含内容: %v\n", cfg.FileProcessing.IncludeContent))
 	output.WriteString(fmt.Sprintf("  包含哈希: %v\n", cfg.FileProcessing.IncludeHash))
-	
+
 	if len(cfg.FileProcessing.ExcludePatterns) > 0 {
 		output.WriteString("  排除模式:\n")
 		for _, pattern := range cfg.FileProcessing.ExcludePatterns {
 			output.WriteString(fmt.Sprintf("    - %s\n", pattern))
 		}
 	}
-	
+
 	if len(cfg.FileProcessing.IncludePatterns) > 0 {
 		output.WriteString("  包含模式:\n")
 		for _, pattern := range cfg.FileProcessing.IncludePatterns {
 			output.WriteString(fmt.Sprintf("    - %s\n", pattern))
 		}
 	}
-	
+
 	output.WriteString("\n性能:\n")
 	output.WriteString(fmt.Sprintf("  最大工作线程: %d\n", cfg.Performance.MaxWorkers))
 	output.WriteString(fmt.Sprintf("  缓冲区大小: %d\n", cfg.Performance.BufferSize))
 	output.WriteString(fmt.Sprintf("  缓存启用: %v\n", cfg.Performance.CacheEnabled))
 	output.WriteString(fmt.Sprintf("  缓存大小: %d\n", cfg.Performance.CacheSize))
-	
+
 	return output.String()
 }

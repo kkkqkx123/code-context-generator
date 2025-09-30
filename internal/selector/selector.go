@@ -39,12 +39,12 @@ func NewSelector(config *types.Config) Selector {
 func (s *FileSelector) SelectFiles(rootPath string, options *types.SelectOptions) ([]string, error) {
 	if options == nil {
 		options = &types.SelectOptions{
-			Recursive:      true,
+			Recursive:       true,
 			IncludePatterns: []string{},
 			ExcludePatterns: constants.DefaultExcludePatterns,
-			MaxDepth:       constants.DefaultMaxDepth,
-			ShowHidden:     constants.DefaultShowHidden,
-			SortBy:         "name",
+			MaxDepth:        constants.DefaultMaxDepth,
+			ShowHidden:      constants.DefaultShowHidden,
+			SortBy:          "name",
 		}
 	}
 
@@ -92,12 +92,12 @@ func (s *FileSelector) SelectFiles(rootPath string, options *types.SelectOptions
 func (s *FileSelector) SelectFolders(rootPath string, options *types.SelectOptions) ([]string, error) {
 	if options == nil {
 		options = &types.SelectOptions{
-			Recursive:      true,
+			Recursive:       true,
 			IncludePatterns: []string{},
 			ExcludePatterns: []string{},
-			MaxDepth:       constants.DefaultMaxDepth,
-			ShowHidden:     constants.DefaultShowHidden,
-			SortBy:         "name",
+			MaxDepth:        constants.DefaultMaxDepth,
+			ShowHidden:      constants.DefaultShowHidden,
+			SortBy:          "name",
 		}
 	}
 
@@ -248,7 +248,7 @@ func (s *FileSelector) shouldIncludeFile(path string, info os.FileInfo, options 
 	return true
 }
 
-func (s *FileSelector) shouldIncludeFolder(path string, info os.FileInfo, options *types.SelectOptions) bool {
+func (s *FileSelector) shouldIncludeFolder(path string, _ os.FileInfo, options *types.SelectOptions) bool {
 	foldername := filepath.Base(path)
 
 	// 检查隐藏文件夹
@@ -337,11 +337,11 @@ func DefaultGetFileType(path string) string {
 // parseFileSize 解析文件大小字符串为字节数
 func parseFileSize(sizeStr string) (int64, error) {
 	sizeStr = strings.TrimSpace(strings.ToUpper(sizeStr))
-	
+
 	// 提取数字和单位
 	var numStr string
 	var unit string
-	
+
 	for i, char := range sizeStr {
 		if char >= '0' && char <= '9' || char == '.' {
 			numStr += string(char)
@@ -350,16 +350,16 @@ func parseFileSize(sizeStr string) (int64, error) {
 			break
 		}
 	}
-	
+
 	if numStr == "" {
 		return 0, fmt.Errorf("无效的文件大小格式: %s", sizeStr)
 	}
-	
+
 	num, err := strconv.ParseFloat(numStr, 64)
 	if err != nil {
 		return 0, fmt.Errorf("解析数字失败: %w", err)
 	}
-	
+
 	// 根据单位计算字节数
 	switch strings.TrimSpace(unit) {
 	case "", "B":
@@ -448,7 +448,7 @@ func GetDirectoryContents(path string, showHidden bool) ([]FileInfo, error) {
 	var contents []FileInfo
 	for _, entry := range entries {
 		fullPath := filepath.Join(path, entry.Name())
-		
+
 		// 检查隐藏文件
 		if !showHidden && strings.HasPrefix(entry.Name(), ".") {
 			continue

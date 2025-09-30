@@ -25,10 +25,10 @@ type Autocompleter interface {
 
 // FilePathAutocompleter 文件路径自动补全器
 type FilePathAutocompleter struct {
-	cache     map[string][]string
-	mu        sync.RWMutex
-	config    *types.AutocompleteConfig
-	maxDepth  int
+	cache    map[string][]string
+	mu       sync.RWMutex
+	config   *types.AutocompleteConfig
+	maxDepth int
 }
 
 // NewAutocompleter 创建新的自动补全器
@@ -83,7 +83,7 @@ func (a *FilePathAutocompleter) GetSuggestions(input string, maxSuggestions int)
 	}
 
 	suggestions := a.getMatchingItems(input)
-	
+
 	if len(suggestions) > maxSuggestions {
 		suggestions = suggestions[:maxSuggestions]
 	}
@@ -156,13 +156,13 @@ func (a *FilePathAutocompleter) completeFilePath(input string, context *types.Co
 	return matches, nil
 }
 
-func (a *FilePathAutocompleter) completeDirectory(input string, context *types.CompleteContext) ([]string, error) {
+func (a *FilePathAutocompleter) completeDirectory(input string, _ *types.CompleteContext) ([]string, error) {
 	// 尝试不同的目录级别
 	parts := strings.Split(input, string(os.PathSeparator))
-	
+
 	for i := len(parts); i > 0; i-- {
 		partialPath := strings.Join(parts[:i], string(os.PathSeparator))
-		
+
 		if partialPath == "" {
 			partialPath = "."
 		}
@@ -170,7 +170,7 @@ func (a *FilePathAutocompleter) completeDirectory(input string, context *types.C
 		if _, err := os.Stat(partialPath); err == nil {
 			// 找到存在的目录
 			remaining := strings.Join(parts[i:], string(os.PathSeparator))
-			
+
 			items, err := a.getDirectoryItems(partialPath)
 			if err != nil {
 				continue
@@ -195,7 +195,7 @@ func (a *FilePathAutocompleter) completeDirectory(input string, context *types.C
 	return []string{}, nil
 }
 
-func (a *FilePathAutocompleter) completeExtension(input string, context *types.CompleteContext) ([]string, error) {
+func (a *FilePathAutocompleter) completeExtension(input string, _ *types.CompleteContext) ([]string, error) {
 	// 获取常见文件扩展名
 	commonExtensions := []string{
 		".go", ".py", ".js", ".ts", ".java", ".cpp", ".c", ".h",
@@ -215,7 +215,7 @@ func (a *FilePathAutocompleter) completeExtension(input string, context *types.C
 	return matches, nil
 }
 
-func (a *FilePathAutocompleter) completePattern(input string, context *types.CompleteContext) ([]string, error) {
+func (a *FilePathAutocompleter) completePattern(input string, _ *types.CompleteContext) ([]string, error) {
 	// 支持通配符模式匹配
 	dir := filepath.Dir(input)
 	pattern := filepath.Base(input)
@@ -235,7 +235,7 @@ func (a *FilePathAutocompleter) completePattern(input string, context *types.Com
 	return matches, nil
 }
 
-func (a *FilePathAutocompleter) completeGeneric(input string, context *types.CompleteContext) ([]string, error) {
+func (a *FilePathAutocompleter) completeGeneric(input string, _ *types.CompleteContext) ([]string, error) {
 	// 通用补全：尝试文件和目录
 	dir := filepath.Dir(input)
 	base := filepath.Base(input)
@@ -269,7 +269,7 @@ func (a *FilePathAutocompleter) getMatchingItems(input string) []string {
 	defer a.mu.RUnlock()
 
 	var allItems []string
-	
+
 	// 从缓存中获取匹配项
 	for _, items := range a.cache {
 		for _, item := range items {
@@ -318,7 +318,7 @@ func (a *FilePathAutocompleter) scanDirectory(dir string) ([]string, error) {
 	var items []string
 	for _, entry := range entries {
 		name := entry.Name()
-		
+
 		// 跳过隐藏文件
 		if strings.HasPrefix(name, ".") {
 			continue
@@ -333,14 +333,14 @@ func (a *FilePathAutocompleter) scanDirectory(dir string) ([]string, error) {
 func removeDuplicates(items []string) []string {
 	seen := make(map[string]bool)
 	var result []string
-	
+
 	for _, item := range items {
 		if !seen[item] {
 			seen[item] = true
 			result = append(result, item)
 		}
 	}
-	
+
 	return result
 }
 
@@ -373,12 +373,12 @@ func (c *CommandAutocompleter) RegisterCommand(info *CommandInfo) {
 // Complete 补全命令
 func (c *CommandAutocompleter) Complete(input string) []string {
 	var matches []string
-	
+
 	for name, info := range c.commands {
 		if strings.HasPrefix(name, input) {
 			matches = append(matches, name)
 		}
-		
+
 		// 检查别名
 		for _, alias := range info.Aliases {
 			if strings.HasPrefix(alias, input) {
@@ -425,7 +425,7 @@ func NewCompositeSuggestionProvider(providers ...SuggestionProvider) *CompositeS
 // GetSuggestions 获取建议
 func (c *CompositeSuggestionProvider) GetSuggestions(input string, context *types.CompleteContext) ([]Suggestion, error) {
 	var allSuggestions []Suggestion
-	
+
 	for _, provider := range c.providers {
 		suggestions, err := provider.GetSuggestions(input, context)
 		if err != nil {
@@ -446,14 +446,14 @@ func (c *CompositeSuggestionProvider) GetSuggestions(input string, context *type
 func removeDuplicateSuggestions(suggestions []Suggestion) []Suggestion {
 	seen := make(map[string]bool)
 	var result []Suggestion
-	
+
 	for _, suggestion := range suggestions {
 		if !seen[suggestion.Text] {
 			seen[suggestion.Text] = true
 			result = append(result, suggestion)
 		}
 	}
-	
+
 	return result
 }
 

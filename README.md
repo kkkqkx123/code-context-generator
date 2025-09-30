@@ -113,15 +113,40 @@ TUI界面提供：
 - 进度显示
 - 结果预览
 
+## 📚 文档
+
+我们提供了完整的文档体系，帮助你快速上手和深入了解本工具：
+
+### 🎯 新用户
+- [**快速入门指南**](docs/quickstart.md) - 5分钟快速上手 🚀
+- [**使用文档**](docs/usage.md) - 完整的使用指南 📖
+- [**配置详解**](docs/usage.md#配置文件详解) - 配置项详细说明 ⚙️
+
+### 🚀 部署和运维
+- [**部署文档**](docs/deployment.md) - 多种部署方式指南 📦
+- [**系统服务**](docs/deployment.md#系统服务部署) - 配置为系统服务 🔧
+- [**容器化部署**](docs/deployment.md#容器化部署) - Docker/Kubernetes部署 🐳
+
+### 💻 开发贡献
+- [**开发环境文档**](docs/development.md) - 开发环境搭建指南 🛠️
+- [**开发流程**](docs/development.md#开发流程) - 贡献代码流程 📋
+- [**API文档**](docs/development.md#api文档) - 代码API文档 📊
+
+### 📖 文档导航
+- [**文档中心**](docs/README.md) - 所有文档的索引和导航 📑
+- [**常见问题**](docs/usage.md#常见问题) - 常见问题解答 ❓
+- [**故障排除**](docs/usage.md#故障排除) - 问题排查指南 🔍
+
 ## 配置
 
-配置文件支持 TOML 格式，默认配置文件示例：
+配置文件支持 TOML、YAML、JSON 格式，默认配置文件示例：
 
 ```toml
 [output]
 format = "json"
 encoding = "utf-8"
 file_path = ""
+pretty = true
 
 [file_processing]
 include_hidden = false
@@ -146,7 +171,7 @@ show_preview = true
 
 [performance]
 max_workers = 4
-buffer_size = 1024
+buffer_size = 8192
 cache_enabled = true
 cache_size = 100
 
@@ -156,7 +181,25 @@ file_path = ""
 max_size = 10
 max_backups = 3
 max_age = 7
-```
+
+[formats.json]
+enabled = true
+indent = "  "
+sort_keys = true
+
+[formats.xml]
+enabled = true
+indent = "  "
+use_cdata = false
+
+[formats.toml]
+enabled = true
+indent = "  "
+
+[formats.markdown]
+enabled = true
+template = "default"
+include_toc = true
 
 ## 架构设计
 

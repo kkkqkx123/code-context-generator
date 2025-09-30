@@ -42,11 +42,11 @@ func NewFileSystemWalker(options types.WalkOptions) Walker {
 func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*types.ContextData, error) {
 	if options == nil {
 		options = &types.WalkOptions{
-			MaxDepth:       constants.DefaultMaxDepth,
-			MaxFileSize:    10 * 1024 * 1024,
+			MaxDepth:        constants.DefaultMaxDepth,
+			MaxFileSize:     10 * 1024 * 1024,
 			ExcludePatterns: constants.DefaultExcludePatterns,
 			IncludePatterns: []string{},
-			FollowSymlinks: false,
+			FollowSymlinks:  false,
 		}
 	}
 
@@ -72,7 +72,7 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 		if err != nil {
 			return err
 		}
-		
+
 		depth := strings.Count(relPath, string(os.PathSeparator))
 		if depth > options.MaxDepth {
 			if info.IsDir() {
@@ -86,7 +86,7 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 			wg.Add(1)
 			go func(filePath string) {
 				defer wg.Done()
-				
+
 				// 应用过滤器
 				if !w.shouldIncludeFile(filePath, options) {
 					return
@@ -109,12 +109,12 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 			// 处理文件夹
 			if path != rootPath { // 跳过根路径
 				folderInfo, err := w.GetFolderInfo(path)
-			if err != nil {
-				mu.Lock()
-				walkErrors = append(walkErrors, fmt.Errorf("获取文件夹信息失败 %s: %w", path, err))
-				mu.Unlock()
-				return nil
-			}
+				if err != nil {
+					mu.Lock()
+					walkErrors = append(walkErrors, fmt.Errorf("获取文件夹信息失败 %s: %w", path, err))
+					mu.Unlock()
+					return nil
+				}
 
 				mu.Lock()
 				contextData.Folders = append(contextData.Folders, *folderInfo)
@@ -156,12 +156,12 @@ func (w *FileSystemWalker) GetFileInfo(path string) (*types.FileInfo, error) {
 	}
 
 	return &types.FileInfo{
-		Path:     path,
-		Name:     info.Name(),
-		Size:     info.Size(),
-		ModTime:  info.ModTime(),
-		IsDir:    info.IsDir(),
-		Content:  string(content),
+		Path:    path,
+		Name:    info.Name(),
+		Size:    info.Size(),
+		ModTime: info.ModTime(),
+		IsDir:   info.IsDir(),
+		Content: string(content),
 	}, nil
 }
 
@@ -271,20 +271,6 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, options *types.WalkOpt
 	return true
 }
 
-func (w *FileSystemWalker) calculateFolderSize(path string) int64 {
-	var size int64
-	filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return nil
-	})
-	return size
-}
-
 // GetFileExtension 获取文件扩展名
 func GetFileExtension(filename string) string {
 	return filepath.Ext(filename)
@@ -337,13 +323,13 @@ func GetSymlinkTarget(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	// 如果是相对路径，转换为绝对路径
 	if !filepath.IsAbs(target) {
 		dir := filepath.Dir(path)
 		target = filepath.Join(dir, target)
 	}
-	
+
 	return filepath.Abs(target)
 }
 

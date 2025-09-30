@@ -143,7 +143,7 @@ func NewXMLFormatter(config *types.FormatConfig) Formatter {
 func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 	// 创建可序列化的结构，避免map[string]interface{}
 	type SerializableContextData struct {
-		XMLName     xml.Name       `xml:"context"`
+		XMLName     xml.Name           `xml:"context"`
 		Files       []types.FileInfo   `xml:"files>file"`
 		Folders     []types.FolderInfo `xml:"folders>folder"`
 		FileCount   int                `xml:"file_count"`
@@ -214,12 +214,12 @@ func NewTOMLFormatter(config *types.FormatConfig) Formatter {
 // Format 格式化上下文数据
 func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 	var buf strings.Builder
-	
+
 	// 写入文件部分
 	if len(data.Files) > 0 {
 		buf.WriteString("[files]\n")
 		for i, file := range data.Files {
-			buf.WriteString(fmt.Sprintf("  [[files.file]]\n"))
+			buf.WriteString("  [[files.file]]\n")
 			buf.WriteString(fmt.Sprintf("    path = \"%s\"\n", file.Path))
 			buf.WriteString(fmt.Sprintf("    name = \"%s\"\n", file.Name))
 			buf.WriteString(fmt.Sprintf("    size = %d\n", file.Size))
@@ -234,7 +234,7 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 	if len(data.Folders) > 0 {
 		buf.WriteString("\n[folders]\n")
 		for i, folder := range data.Folders {
-			buf.WriteString(fmt.Sprintf("  [[folders.folder]]\n"))
+			buf.WriteString("  [[folders.folder]]\n")
 			buf.WriteString(fmt.Sprintf("    path = \"%s\"\n", folder.Path))
 			buf.WriteString(fmt.Sprintf("    name = \"%s\"\n", folder.Name))
 			buf.WriteString(fmt.Sprintf("    file_count = %d\n", len(folder.Files)))
@@ -251,7 +251,7 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 // FormatFile 格式化单个文件
 func (f *TOMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 	var buf strings.Builder
-	
+
 	buf.WriteString(fmt.Sprintf("path = \"%s\"\n", file.Path))
 	buf.WriteString(fmt.Sprintf("name = \"%s\"\n", file.Name))
 	buf.WriteString(fmt.Sprintf("size = %d\n", file.Size))
@@ -264,7 +264,7 @@ func (f *TOMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 // FormatFolder 格式化文件夹
 func (f *TOMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 	var buf strings.Builder
-	
+
 	buf.WriteString(fmt.Sprintf("path = \"%s\"\n", folder.Path))
 	buf.WriteString(fmt.Sprintf("name = \"%s\"\n", folder.Name))
 	buf.WriteString(fmt.Sprintf("file_count = %d\n", len(folder.Files)))
@@ -293,7 +293,7 @@ func NewMarkdownFormatter(config *types.FormatConfig) Formatter {
 // Format 格式化上下文数据
 func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 	var sb strings.Builder
-	
+
 	// 添加标题
 	sb.WriteString("# 代码上下文\n\n")
 	sb.WriteString(fmt.Sprintf("生成时间: %s\n\n", time.Now().Format(time.RFC3339)))
@@ -306,7 +306,7 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 			sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", file.Path))
 			sb.WriteString(fmt.Sprintf("- **大小**: %d 字节\n", file.Size))
 			sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
-			
+
 			// 添加代码块
 			sb.WriteString("```")
 			if ext := filepath.Ext(file.Path); ext != "" {
@@ -326,7 +326,7 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 			sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", folder.Path))
 			sb.WriteString(fmt.Sprintf("- **文件数**: %d\n", len(folder.Files)))
 			sb.WriteString(fmt.Sprintf("- **文件数**: %d\n\n", len(folder.Files)))
-			
+
 			// 添加文件夹中的文件
 			if len(folder.Files) > 0 {
 				sb.WriteString("#### 文件列表\n\n")
@@ -344,12 +344,12 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 // FormatFile 格式化单个文件
 func (f *MarkdownFormatter) FormatFile(file types.FileInfo) (string, error) {
 	var sb strings.Builder
-	
+
 	sb.WriteString(fmt.Sprintf("## %s\n\n", file.Name))
 	sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", file.Path))
 	sb.WriteString(fmt.Sprintf("- **大小**: %d 字节\n", file.Size))
 	sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
-	
+
 	// 添加代码块
 	sb.WriteString("```")
 	if ext := filepath.Ext(file.Path); ext != "" {
@@ -365,12 +365,12 @@ func (f *MarkdownFormatter) FormatFile(file types.FileInfo) (string, error) {
 // FormatFolder 格式化文件夹
 func (f *MarkdownFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 	var sb strings.Builder
-	
+
 	sb.WriteString(fmt.Sprintf("## %s\n\n", folder.Name))
 	sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", folder.Path))
 	sb.WriteString(fmt.Sprintf("- **文件数**: %d\n", len(folder.Files)))
 	sb.WriteString(fmt.Sprintf("- **文件数**: %d\n\n", len(folder.Files)))
-	
+
 	// 添加文件列表
 	if len(folder.Files) > 0 {
 		sb.WriteString("### 文件列表\n\n")
@@ -427,13 +427,13 @@ func NewFormatter(format string) (Formatter, error) {
 // CreateDefaultFactory 创建默认的格式转换器工厂
 func CreateDefaultFactory(configs map[string]*types.FormatConfig) *FormatterFactory {
 	factory := NewFormatterFactory()
-	
+
 	// 注册所有支持的格式
 	factory.Register(constants.FormatJSON, NewJSONFormatter(configs[constants.FormatJSON]))
 	factory.Register(constants.FormatXML, NewXMLFormatter(configs[constants.FormatXML]))
 	factory.Register(constants.FormatTOML, NewTOMLFormatter(configs[constants.FormatTOML]))
 	factory.Register(constants.FormatMarkdown, NewMarkdownFormatter(configs[constants.FormatMarkdown]))
-	
+
 	return factory
 }
 

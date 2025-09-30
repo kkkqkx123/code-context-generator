@@ -1,0 +1,86 @@
+# 代码上下文生成器 - 性能优化配置
+# 适用于大型项目或需要高性能处理的场景
+
+[output]
+format = "json"          # 使用JSON格式，解析速度最快
+encoding = "utf-8"
+pretty = false           # 禁用美化输出，提高性能
+output_dir = "./output"
+filename_template = "fast_scan_{{.Timestamp}}.json"
+
+[file_processing]
+include_hidden = false
+include_content = false  # 不包含文件内容，大幅提高性能
+include_hash = false     # 不计算哈希值，节省CPU时间
+max_file_size = 1048576  # 限制1MB，避免处理大文件
+max_depth = 3            # 限制扫描深度，减少文件数量
+buffer_size = 16384      # 增大缓冲区，提高I/O效率
+workers = 12             # 增加工作线程数（根据CPU核心数调整）
+
+# 最小化排除模式，只排除最常见的文件
+exclude_patterns = [
+    # 大文件和二进制
+    "*.exe", "*.dll", "*.so", "*.dylib",
+    
+    # 依赖目录（通常很大）
+    "node_modules", "vendor", ".git",
+    
+    # 临时文件
+    "*.tmp", "*.temp", "*.log",
+    
+    # 构建产物
+    "dist", "build", "target"
+]
+
+include_patterns = []  # 不排除任何特定类型的文件
+
+[ui]
+theme = "default"
+show_progress = true     # 显示进度，了解处理状态
+show_size = false        # 不显示大小，节省计算时间
+show_date = false        # 不显示日期，节省计算时间
+show_preview = false     # 不显示预览，节省内存
+auto_complete = false    # 禁用自动补全，提高响应速度
+
+[performance]
+cache_enabled = true     # 启用缓存，提高重复扫描性能
+cache_size = 500         # 增大缓存大小
+memory_limit = 536870912  # 限制512MB内存使用
+aggressive_gc = true     # 启用激进的垃圾回收
+
+[logging]
+level = "warn"           # 只记录警告和错误，减少I/O
+file_path = ""           # 控制台输出，避免文件I/O
+max_size = 10
+max_backups = 3
+max_age = 7
+
+[formats.json]
+enabled = true
+indent = ""              # 无缩进，最小化输出大小
+sort_keys = false        # 不排序键，提高性能
+escape_html = false
+
+[formats.xml]
+enabled = false          # 禁用不使用的格式，节省内存
+
+[formats.toml]
+enabled = false          # 禁用不使用的格式，节省内存
+
+[formats.markdown]
+enabled = false          # 禁用不使用的格式，节省内存
+
+# 性能监控配置
+[monitoring]
+enable_metrics = true    # 启用性能指标收集
+memory_tracking = true   # 跟踪内存使用情况
+time_tracking = true     # 跟踪处理时间
+file_count_tracking = true  # 跟踪文件数量
+
+# 快速扫描模式
+[fast_mode]
+enabled = true           # 启用快速模式
+skip_symlinks = true     # 跳过符号链接
+skip_empty_dirs = true   # 跳过空目录
+parallel_walk = true     # 启用并行目录遍历
+early_termination = false  # 禁用早期终止（确保完整性）

@@ -358,7 +358,7 @@ func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
 }
 
 // handleSelectKeys 处理文件选择器按键
-func (m Model) handleSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleSelectKeys(_ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 文件选择器的按键处理在FileSelectorModel中
 	// 这里只处理ESC键，已经由handleEscKey处理
 	return m, nil
@@ -391,7 +391,7 @@ func (m Model) handleResultKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleConfigKeys 处理配置编辑器按键
-func (m Model) handleConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConfigKeys(_ tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 配置编辑器的按键处理在ConfigEditorModel中
 	// 这里只处理ESC键，已经由handleEscKey处理
 	return m, nil
