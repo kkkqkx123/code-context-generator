@@ -1,0 +1,548 @@
+// Package main TUI应用程序主入口
+package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"code-context-generator/pkg/types"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+var (
+	cfg        *types.Config
+	configPath string
+	version    = "1.0.0"
+)
+
+// UI样式定义
+var (
+	titleStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#7D56F4")).
+			MarginBottom(1)
+
+	selectedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4")).
+			Bold(true)
+
+	normalStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FAFAFA"))
+
+	helpStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#626262"))
+
+	errorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF0000")).
+			Bold(true)
+
+	successStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00FF00")).
+			Bold(true)
+
+	warningStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFF00")).
+			Bold(true)
+)
+
+// Model 主模型
+type Model struct {
+	state           AppState
+	currentView     ViewType
+	pathInput       string
+	outputFormat    string
+	outputPath      string
+	excludePatterns []string
+	includePatterns []string
+	options         types.WalkOptions
+	result          *types.WalkResult
+	err             error
+	width           int
+	height          int
+	// 子模型
+	fileSelector *FileSelectorModel
+	progressBar  *ProgressModel
+	resultViewer *ResultViewerModel
+	configEditor *ConfigEditorModel
+}
+
+// AppState 应用程序状态
+type AppState int
+
+const (
+	StateInit AppState = iota
+	StateInput
+	StateSelect
+	StateProcessing
+	StateResult
+	StateConfig
+	StateError
+)
+
+// ViewType 视图类型
+type ViewType int
+
+const (
+	ViewMain ViewType = iota
+	ViewSelect
+	ViewProgress
+	ViewResult
+	ViewConfig
+)
+
+// 初始化函数
+func init() {
+	// 使用默认配置
+	cfg = getDefaultConfig()
+}
+
+// main 主函数
+func main() {
+	// 初始化模型
+	m := initialModel()
+
+	// 创建tea程序
+	p := tea.NewProgram(m, tea.WithAltScreen())
+
+	// 运行程序
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error running program: %v", err)
+		os.Exit(1)
+	}
+}
+
+// initialModel 创建初始模型
+func initialModel() Model {
+	return Model{
+		state:           StateInit,
+		currentView:     ViewMain,
+		pathInput:       ".",
+		outputFormat:    "json",
+		outputPath:      "",
+		excludePatterns: []string{},
+		includePatterns: []string{},
+		options: types.WalkOptions{
+			MaxDepth:        1,
+			MaxFileSize:     10 * 1024 * 1024,
+			ExcludePatterns: []string{},
+			IncludePatterns: []string{},
+			FollowSymlinks:  false,
+			ShowHidden:      false,
+		},
+		fileSelector: NewFileSelectorModel("."),
+		progressBar:  NewProgressModel(),
+		resultViewer: NewResultViewerModel(),
+		configEditor: NewConfigEditorModel(nil),
+	}
+}
+
+// Init 初始化
+func (m Model) Init() tea.Cmd {
+	return nil
+}
+
+// Update 更新模型
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return m.handleKeyMsg(msg)
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
+	case ProgressMsg:
+		if m.progressBar != nil {
+			m.progressBar.SetProgress(msg.Progress)
+			m.progressBar.SetStatus(msg.Status)
+		}
+		return m, nil
+	case ResultMsg:
+		m.result = msg.Result
+		m.state = StateResult
+		m.currentView = ViewResult
+		if m.resultViewer != nil {
+			m.resultViewer.SetResult(m.result)
+		}
+		return m, nil
+	case ErrorMsg:
+		m.err = msg.Err
+		m.state = StateError
+		return m, nil
+	case FileSelectionMsg:
+		m.options.IncludePatterns = msg.Selected
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	case ConfigUpdateMsg:
+		cfg = msg.Config
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	default:
+		// 更新子模型
+		switch m.currentView {
+		case ViewSelect:
+			if m.fileSelector != nil {
+				newModel, cmd := m.fileSelector.Update(msg)
+				m.fileSelector = newModel.(*FileSelectorModel)
+				return m, cmd
+			}
+		case ViewProgress:
+			if m.progressBar != nil {
+				newModel, cmd := m.progressBar.Update(msg)
+				m.progressBar = newModel.(*ProgressModel)
+				return m, cmd
+			}
+		case ViewResult:
+			if m.resultViewer != nil {
+				newModel, cmd := m.resultViewer.Update(msg)
+				m.resultViewer = newModel.(*ResultViewerModel)
+				return m, cmd
+			}
+		case ViewConfig:
+			if m.configEditor != nil {
+				newModel, cmd := m.configEditor.Update(msg)
+				m.configEditor = newModel.(*ConfigEditorModel)
+				return m, cmd
+			}
+		}
+	}
+
+	return m, nil
+}
+
+// View 渲染视图
+func (m Model) View() string {
+	if m.err != nil {
+		return m.renderError()
+	}
+
+	switch m.currentView {
+	case ViewMain:
+		return m.renderMainView()
+	case ViewSelect:
+		if m.fileSelector != nil {
+			return m.fileSelector.View()
+		}
+	case ViewProgress:
+		if m.progressBar != nil {
+			return m.progressBar.View()
+		}
+	case ViewResult:
+		if m.resultViewer != nil {
+			return m.resultViewer.View()
+		}
+	case ViewConfig:
+		if m.configEditor != nil {
+			return m.configEditor.View()
+		}
+	}
+
+	return "未知视图"
+}
+
+// handleKeyMsg 处理键盘消息
+func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// 全局退出快捷键
+	if msg.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+
+	// ESC键返回上一级
+	if msg.String() == "esc" {
+		return m.handleEscKey()
+	}
+
+	switch m.state {
+	case StateInit, StateInput:
+		return m.handleMainKeys(msg)
+	case StateError:
+		return m.handleErrorKeys(msg)
+	case StateSelect:
+		return m.handleSelectKeys(msg)
+	case StateProcessing:
+		return m.handleProcessingKeys(msg)
+	case StateResult:
+		return m.handleResultKeys(msg)
+	case StateConfig:
+		return m.handleConfigKeys(msg)
+	default:
+		return m, nil
+	}
+}
+
+// handleMainKeys 处理主界面按键
+func (m Model) handleMainKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q": // 仅在主界面按q退出
+		return m, tea.Quit
+	case "enter":
+		return m.startProcessing()
+	case "s":
+		m.state = StateSelect
+		m.currentView = ViewSelect
+		return m, nil
+	case "c":
+		m.state = StateConfig
+		m.currentView = ViewConfig
+		return m, nil
+	case "r":
+		if m.options.MaxDepth == 0 {
+			m.options.MaxDepth = 1
+		} else {
+			m.options.MaxDepth = 0
+		}
+		return m, nil
+	case "h":
+		m.options.ShowHidden = !m.options.ShowHidden
+		return m, nil
+	case "tab":
+		// 切换焦点
+		return m, nil
+	case "up", "down":
+		// 导航
+		return m, nil
+	default:
+		// 处理输入
+		if m.state == StateInput {
+			return m.handleInput(msg)
+		}
+	}
+
+	return m, nil
+}
+
+// handleErrorKeys 处理错误界面按键
+func (m Model) handleErrorKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "enter":
+		m.state = StateInput
+		m.err = nil
+		return m, nil
+	}
+	return m, nil
+}
+
+// handleEscKey 处理ESC键返回上一级
+func (m Model) handleEscKey() (tea.Model, tea.Cmd) {
+	switch m.state {
+	case StateSelect:
+		// 从文件选择器返回主界面
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	case StateConfig:
+		// 从配置编辑器返回主界面
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	case StateResult:
+		// 从结果查看器返回主界面
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	case StateProcessing:
+		// 处理中不允许返回，可以取消处理
+		return m, nil
+	case StateError:
+		// 错误状态已经在handleErrorKeys中处理
+		return m, nil
+	default:
+		// 主界面按ESC也退出
+		return m, tea.Quit
+	}
+}
+
+// handleSelectKeys 处理文件选择器按键
+func (m Model) handleSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// 文件选择器的按键处理在FileSelectorModel中
+	// 这里只处理ESC键，已经由handleEscKey处理
+	return m, nil
+}
+
+// handleProcessingKeys 处理处理中按键
+func (m Model) handleProcessingKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "c": // 取消处理
+		// 这里应该实现取消逻辑
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	}
+	return m, nil
+}
+
+// handleResultKeys 处理结果查看器按键
+func (m Model) handleResultKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "b": // 返回主界面
+		m.state = StateInput
+		m.currentView = ViewMain
+		return m, nil
+	case "s": // 保存结果
+		// 这里应该实现保存逻辑
+		return m, nil
+	}
+	return m, nil
+}
+
+// handleConfigKeys 处理配置编辑器按键
+func (m Model) handleConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// 配置编辑器的按键处理在ConfigEditorModel中
+	// 这里只处理ESC键，已经由handleEscKey处理
+	return m, nil
+}
+
+// handleInput 处理输入
+func (m Model) handleInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "backspace":
+		if len(m.pathInput) > 0 {
+			m.pathInput = m.pathInput[:len(m.pathInput)-1]
+		}
+	default:
+		if len(msg.String()) == 1 {
+			m.pathInput += msg.String()
+		}
+	}
+	m.options.MaxDepth = 0
+	if m.pathInput != "." {
+		m.options.MaxDepth = 1
+	}
+	return m, nil
+}
+
+// startProcessing 开始处理
+func (m Model) startProcessing() (tea.Model, tea.Cmd) {
+	m.state = StateProcessing
+	m.currentView = ViewProgress
+
+	return m, tea.Batch(
+		tea.Tick(0, func(time.Time) tea.Msg {
+			return ProgressMsg{Progress: 0, Status: "开始扫描..."}
+		}),
+		m.processFiles(),
+	)
+}
+
+// processFiles 处理文件
+func (m Model) processFiles() tea.Cmd {
+	return func() tea.Msg {
+		// 创建遍历结果
+		result := &types.WalkResult{
+			Files:       []types.FileInfo{},
+			Folders:     []types.FolderInfo{},
+			FileCount:   0,
+			FolderCount: 0,
+			TotalSize:   0,
+		}
+
+		// 这里应该调用实际的文件遍历逻辑
+		// 暂时返回空结果
+		return ResultMsg{Result: result}
+	}
+}
+
+// renderMainView 渲染主视图
+func (m Model) renderMainView() string {
+	var content strings.Builder
+
+	// 标题
+	content.WriteString(titleStyle.Render("代码上下文生成器"))
+	content.WriteString("\n\n")
+
+	// 路径输入
+	content.WriteString(normalStyle.Render("扫描路径: "))
+	content.WriteString(m.pathInput)
+	content.WriteString("\n\n")
+
+	// 选项
+	content.WriteString(normalStyle.Render("选项:\n"))
+	recursive := "否"
+	if m.options.MaxDepth != 0 {
+		recursive = "是"
+	}
+	content.WriteString(fmt.Sprintf("\n  递归扫描: %s (按 r 切换)\n", recursive))
+
+	hidden := "否"
+	if m.options.ShowHidden {
+		hidden = "是"
+	}
+	content.WriteString(fmt.Sprintf("  包含隐藏文件: %s (按 h 切换)\n", hidden))
+
+	content.WriteString(fmt.Sprintf("  输出格式: %s\n", m.outputFormat))
+
+	if m.outputPath != "" {
+		content.WriteString(fmt.Sprintf("  输出文件: %s\n", m.outputPath))
+	}
+
+	content.WriteString("\n")
+
+	// 操作提示
+	content.WriteString(helpStyle.Render("操作:\n"))
+	content.WriteString("\n  Enter - 开始扫描\n")
+	content.WriteString("  s - 选择文件\n")
+	content.WriteString("  c - 配置设置\n")
+	content.WriteString("  ESC - 退出程序\n")
+	content.WriteString("  Ctrl+C - 强制退出\n")
+
+	return content.String()
+}
+
+// renderError 渲染错误视图
+func (m Model) renderError() string {
+	var content strings.Builder
+
+	content.WriteString(errorStyle.Render("错误:\n"))
+	content.WriteString(m.err.Error())
+	content.WriteString("\n\n")
+	content.WriteString(helpStyle.Render("按 Esc 或 Enter 返回"))
+
+	return content.String()
+}
+
+// getDefaultConfig 获取默认配置
+func getDefaultConfig() *types.Config {
+	return &types.Config{
+		Output: types.OutputConfig{
+			Format:   "json",
+			Encoding: "utf-8",
+		},
+		FileProcessing: types.FileProcessingConfig{
+			IncludeHidden: false,
+			MaxFileSize:   10 * 1024 * 1024,
+			MaxDepth:      0,
+			ExcludePatterns: []string{
+				"*.exe", "*.dll", "*.so", "*.dylib",
+				"*.pyc", "*.pyo", "*.pyd",
+				"node_modules", ".git", ".svn",
+			},
+			IncludePatterns: []string{},
+			IncludeContent:  false,
+			IncludeHash:     false,
+		},
+		UI: types.UIConfig{
+			Theme:        "default",
+			ShowProgress: true,
+			ShowSize:     true,
+			ShowDate:     true,
+			ShowPreview:  true,
+		},
+		Performance: types.PerformanceConfig{
+			MaxWorkers:   4,
+			BufferSize:   1024,
+			CacheEnabled: true,
+			CacheSize:    100,
+		},
+		Logging: types.LoggingConfig{
+			Level:      "info",
+			MaxSize:    10,
+			MaxBackups: 3,
+			MaxAge:     7,
+		},
+	}
+}
