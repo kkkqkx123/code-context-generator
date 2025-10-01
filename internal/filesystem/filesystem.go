@@ -74,10 +74,11 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 		}
 
 		depth := strings.Count(relPath, string(os.PathSeparator))
-		if depth > options.MaxDepth {
+		if depth >= options.MaxDepth {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
+			// 跳过深度超过限制的文件
 			return nil
 		}
 
@@ -273,6 +274,15 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, options *types.WalkOpt
 
 // GetFileExtension 获取文件扩展名
 func GetFileExtension(filename string) string {
+	// 隐藏文件（以.开头）没有扩展名
+	if strings.HasPrefix(filename, ".") && len(filename) > 1 {
+		// 检查是否包含另一个点（如.gitignore）
+		lastDotIndex := strings.LastIndex(filename, ".")
+		if lastDotIndex == 0 {
+			// 只有开头的点，没有扩展名
+			return ""
+		}
+	}
 	return filepath.Ext(filename)
 }
 

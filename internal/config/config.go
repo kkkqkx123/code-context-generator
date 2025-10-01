@@ -55,7 +55,7 @@ func (cm *ConfigManager) Load(configPath string) error {
 	// 检查文件是否存在
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// 如果文件不存在，创建默认配置
-		return cm.Save(configPath, "yaml")
+		return cm.saveConfig(configPath, "yaml")
 	}
 
 	config, err := LoadConfig(configPath)
@@ -200,6 +200,24 @@ func (cm *ConfigManager) GetOutputFilename(format string) string {
 	filename = strings.ReplaceAll(filename, "{{.extension}}", format)
 
 	return filename
+}
+
+// saveConfig 内部保存配置（不加锁）
+func (cm *ConfigManager) saveConfig(configPath string, format string) error {
+	if cm.config == nil {
+		return fmt.Errorf("配置为空")
+	}
+
+	switch strings.ToLower(format) {
+	case "yaml", "yml":
+		return cm.saveYAML(configPath)
+	case "json":
+		return cm.saveJSON(configPath)
+	case "toml":
+		return cm.saveTOML(configPath)
+	default:
+		return fmt.Errorf("不支持的格式: %s", format)
+	}
 }
 
 // 辅助方法
