@@ -1,7 +1,0 @@
-config.json
-config.toml
-config.yaml
-
-
-internal\config\config_test.go
-将输出的文件改为config_test.yaml，以免与正式的配置文件混淆

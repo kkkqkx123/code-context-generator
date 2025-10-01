@@ -238,7 +238,6 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 			buf.WriteString(fmt.Sprintf("    path = \"%s\"\n", folder.Path))
 			buf.WriteString(fmt.Sprintf("    name = \"%s\"\n", folder.Name))
 			buf.WriteString(fmt.Sprintf("    file_count = %d\n", len(folder.Files)))
-			buf.WriteString(fmt.Sprintf("    file_count = %d\n", len(folder.Files)))
 			if i < len(data.Folders)-1 {
 				buf.WriteString("\n")
 			}
@@ -267,7 +266,6 @@ func (f *TOMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 
 	buf.WriteString(fmt.Sprintf("path = \"%s\"\n", folder.Path))
 	buf.WriteString(fmt.Sprintf("name = \"%s\"\n", folder.Name))
-	buf.WriteString(fmt.Sprintf("file_count = %d\n", len(folder.Files)))
 	buf.WriteString(fmt.Sprintf("file_count = %d\n", len(folder.Files)))
 	buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", folder.ModTime.Format(time.RFC3339)))
 
