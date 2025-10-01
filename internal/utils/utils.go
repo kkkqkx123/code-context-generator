@@ -183,6 +183,10 @@ func IsSubPath(parent, child string) bool {
 	if err != nil {
 		return false
 	}
+	// 如果相对路径是 "." 或空字符串，说明是同一个路径，不算子路径
+	if rel == "." || rel == "" {
+		return false
+	}
 	return !strings.HasPrefix(rel, "..")
 }
 
@@ -196,14 +200,14 @@ func GetCommonPath(paths []string) string {
 		return filepath.Dir(paths[0])
 	}
 
-	// 转换为绝对路径
+	// 转换为绝对路径并清理
 	absPaths := make([]string, 0, len(paths))
 	for _, path := range paths {
 		absPath, err := filepath.Abs(path)
 		if err != nil {
 			continue // 跳过无效路径
 		}
-		absPaths = append(absPaths, absPath)
+		absPaths = append(absPaths, filepath.Clean(absPath))
 	}
 	
 	if len(absPaths) == 0 {
@@ -222,7 +226,8 @@ func GetCommonPath(paths []string) string {
 	for {
 		common := true
 		for _, path := range absPaths {
-			if !strings.HasPrefix(path, minPath) {
+			// 使用 filepath.HasPrefix 来处理路径分隔符问题
+			if !filepath.HasPrefix(path, minPath) {
 				common = false
 				break
 			}

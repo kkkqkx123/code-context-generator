@@ -49,37 +49,80 @@ func (s *FileSelector) SelectFiles(rootPath string, options *types.SelectOptions
 	}
 
 	var files []string
-	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+	
+	// 如果不递归，只处理当前目录
+	if !options.Recursive {
+		entries, err := os.ReadDir(rootPath)
 		if err != nil {
-			return nil // 继续遍历
+			return nil, fmt.Errorf("读取目录失败: %w", err)
 		}
+		
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			
+			fullPath := filepath.Join(rootPath, entry.Name())
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			
+			if s.shouldIncludeFile(fullPath, info, options) {
+				files = append(files, fullPath)
+			}
+		}
+	} else {
+		// 递归遍历
+		err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil // 继续遍历
+			}
 
-		// 跳过目录
-		if info.IsDir() {
+			// 跳过根目录
+			if path == rootPath {
+				return nil
+			}
+
+			// 跳过目录
+			if info.IsDir() {
+				// 检查深度限制
+				relPath, err := filepath.Rel(rootPath, path)
+				if err != nil {
+					return nil
+				}
+				
+				depth := strings.Count(relPath, string(os.PathSeparator))
+				// MaxDepth 为 0 表示无限制，MaxDepth 为 1 表示只处理根目录下的文件
+				if options.MaxDepth > 0 && depth >= options.MaxDepth {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			// 检查文件深度限制
+			relPath, err := filepath.Rel(rootPath, path)
+			if err != nil {
+				return nil
+			}
+			
+			depth := strings.Count(relPath, string(os.PathSeparator))
+			// MaxDepth 为 0 表示无限制，MaxDepth 为 1 表示只处理根目录下的文件
+			if options.MaxDepth > 0 && depth >= options.MaxDepth {
+				return nil
+			}
+
+			// 应用过滤器
+			if s.shouldIncludeFile(path, info, options) {
+				files = append(files, path)
+			}
+
 			return nil
-		}
+		})
 
-		// 检查深度限制
-		relPath, err := filepath.Rel(rootPath, path)
 		if err != nil {
-			return nil
+			return nil, fmt.Errorf("遍历文件失败: %w", err)
 		}
-
-		depth := strings.Count(relPath, string(os.PathSeparator))
-		if depth > options.MaxDepth {
-			return nil
-		}
-
-		// 应用过滤器
-		if s.shouldIncludeFile(path, info, options) {
-			files = append(files, path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("遍历文件失败: %w", err)
 	}
 
 	// 排序
@@ -493,3 +536,4 @@ type FileItem struct {
 	Type     string
 	Selected bool
 }
+
