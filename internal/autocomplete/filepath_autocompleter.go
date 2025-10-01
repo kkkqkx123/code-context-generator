@@ -8,20 +8,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"code-context-generator/pkg/constants"
 	"code-context-generator/pkg/types"
 )
-
-// Autocompleter 自动补全器接口
-type Autocompleter interface {
-	Complete(input string, context *types.CompleteContext) ([]string, error)
-	GetSuggestions(input string, maxSuggestions int) []string
-	UpdateCache(path string) error
-	ClearCache()
-	GetCacheSize() int
-}
 
 // FilePathAutocompleter 文件路径自动补全器
 type FilePathAutocompleter struct {
@@ -125,8 +115,7 @@ func (a *FilePathAutocompleter) GetCacheSize() int {
 	return len(a.cache)
 }
 
-// 自动补全方法
-
+// completeFilePath 文件路径补全
 func (a *FilePathAutocompleter) completeFilePath(input string, context *types.CompleteContext) ([]string, error) {
 	dir := filepath.Dir(input)
 	base := filepath.Base(input)
@@ -156,6 +145,7 @@ func (a *FilePathAutocompleter) completeFilePath(input string, context *types.Co
 	return matches, nil
 }
 
+// completeDirectory 目录补全
 func (a *FilePathAutocompleter) completeDirectory(input string, _ *types.CompleteContext) ([]string, error) {
 	// 尝试不同的目录级别
 	parts := strings.Split(input, string(os.PathSeparator))
@@ -195,6 +185,7 @@ func (a *FilePathAutocompleter) completeDirectory(input string, _ *types.Complet
 	return []string{}, nil
 }
 
+// completeExtension 扩展名补全
 func (a *FilePathAutocompleter) completeExtension(input string, _ *types.CompleteContext) ([]string, error) {
 	// 获取常见文件扩展名
 	commonExtensions := []string{
@@ -215,6 +206,7 @@ func (a *FilePathAutocompleter) completeExtension(input string, _ *types.Complet
 	return matches, nil
 }
 
+// completePattern 模式匹配补全
 func (a *FilePathAutocompleter) completePattern(input string, _ *types.CompleteContext) ([]string, error) {
 	// 支持通配符模式匹配
 	dir := filepath.Dir(input)
@@ -235,6 +227,7 @@ func (a *FilePathAutocompleter) completePattern(input string, _ *types.CompleteC
 	return matches, nil
 }
 
+// completeGeneric 通用补全
 func (a *FilePathAutocompleter) completeGeneric(input string, _ *types.CompleteContext) ([]string, error) {
 	// 通用补全：尝试文件和目录
 	dir := filepath.Dir(input)
@@ -262,8 +255,7 @@ func (a *FilePathAutocompleter) completeGeneric(input string, _ *types.CompleteC
 	return matches, nil
 }
 
-// 辅助方法
-
+// getMatchingItems 获取匹配项
 func (a *FilePathAutocompleter) getMatchingItems(input string) []string {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -286,6 +278,7 @@ func (a *FilePathAutocompleter) getMatchingItems(input string) []string {
 	return uniqueItems
 }
 
+// getDirectoryItems 获取目录项
 func (a *FilePathAutocompleter) getDirectoryItems(dir string) ([]string, error) {
 	// 检查缓存
 	a.mu.RLock()
@@ -309,6 +302,7 @@ func (a *FilePathAutocompleter) getDirectoryItems(dir string) ([]string, error) 
 	return items, nil
 }
 
+// scanDirectory 扫描目录
 func (a *FilePathAutocompleter) scanDirectory(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -328,140 +322,4 @@ func (a *FilePathAutocompleter) scanDirectory(dir string) ([]string, error) {
 	}
 
 	return items, nil
-}
-
-func removeDuplicates(items []string) []string {
-	seen := make(map[string]bool)
-	var result []string
-
-	for _, item := range items {
-		if !seen[item] {
-			seen[item] = true
-			result = append(result, item)
-		}
-	}
-
-	return result
-}
-
-// CommandAutocompleter 命令自动补全器
-type CommandAutocompleter struct {
-	commands map[string]*CommandInfo
-}
-
-// CommandInfo 命令信息
-type CommandInfo struct {
-	Name        string
-	Description string
-	Aliases     []string
-	Subcommands []string
-	Options     []string
-}
-
-// NewCommandAutocompleter 创建命令自动补全器
-func NewCommandAutocompleter() *CommandAutocompleter {
-	return &CommandAutocompleter{
-		commands: make(map[string]*CommandInfo),
-	}
-}
-
-// RegisterCommand 注册命令
-func (c *CommandAutocompleter) RegisterCommand(info *CommandInfo) {
-	c.commands[info.Name] = info
-}
-
-// Complete 补全命令
-func (c *CommandAutocompleter) Complete(input string) []string {
-	var matches []string
-
-	for name, info := range c.commands {
-		if strings.HasPrefix(name, input) {
-			matches = append(matches, name)
-		}
-
-		// 检查别名
-		for _, alias := range info.Aliases {
-			if strings.HasPrefix(alias, input) {
-				matches = append(matches, alias)
-			}
-		}
-	}
-
-	sort.Strings(matches)
-	return matches
-}
-
-// GetCommandInfo 获取命令信息
-func (c *CommandAutocompleter) GetCommandInfo(command string) (*CommandInfo, bool) {
-	info, exists := c.commands[command]
-	return info, exists
-}
-
-// Suggestion 建议项
-type Suggestion struct {
-	Text        string
-	Description string
-	Type        string
-	Icon        string
-}
-
-// SuggestionProvider 建议提供者接口
-type SuggestionProvider interface {
-	GetSuggestions(input string, context *types.CompleteContext) ([]Suggestion, error)
-}
-
-// CompositeSuggestionProvider 组合建议提供者
-type CompositeSuggestionProvider struct {
-	providers []SuggestionProvider
-}
-
-// NewCompositeSuggestionProvider 创建组合建议提供者
-func NewCompositeSuggestionProvider(providers ...SuggestionProvider) *CompositeSuggestionProvider {
-	return &CompositeSuggestionProvider{
-		providers: providers,
-	}
-}
-
-// GetSuggestions 获取建议
-func (c *CompositeSuggestionProvider) GetSuggestions(input string, context *types.CompleteContext) ([]Suggestion, error) {
-	var allSuggestions []Suggestion
-
-	for _, provider := range c.providers {
-		suggestions, err := provider.GetSuggestions(input, context)
-		if err != nil {
-			continue // 跳过出错的提供者
-		}
-		allSuggestions = append(allSuggestions, suggestions...)
-	}
-
-	// 去重和限制数量
-	uniqueSuggestions := removeDuplicateSuggestions(allSuggestions)
-	if len(uniqueSuggestions) > constants.DefaultMaxSuggestions {
-		uniqueSuggestions = uniqueSuggestions[:constants.DefaultMaxSuggestions]
-	}
-
-	return uniqueSuggestions, nil
-}
-
-func removeDuplicateSuggestions(suggestions []Suggestion) []Suggestion {
-	seen := make(map[string]bool)
-	var result []Suggestion
-
-	for _, suggestion := range suggestions {
-		if !seen[suggestion.Text] {
-			seen[suggestion.Text] = true
-			result = append(result, suggestion)
-		}
-	}
-
-	return result
-}
-
-// AutocompleterOptions 自动补全选项
-type AutocompleterOptions struct {
-	Enabled        bool
-	MinChars       int
-	MaxSuggestions int
-	CacheSize      int
-	Timeout        time.Duration
 }
