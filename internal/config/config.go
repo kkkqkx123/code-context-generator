@@ -61,8 +61,10 @@ func (cm *ConfigManager) Load(configPath string) error {
 
 	// 检查文件是否存在
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// 如果文件不存在，创建默认配置
-		return cm.saveConfig(configPath, "yaml")
+		// 如果文件不存在，使用默认配置，不再自动创建配置文件
+		cm.config = GetDefaultConfig()
+		cm.configPath = configPath
+		return nil
 	}
 
 	config, err := LoadConfig(configPath)
@@ -72,6 +74,9 @@ func (cm *ConfigManager) Load(configPath string) error {
 
 	// 应用环境变量覆盖
 	cm.applyEnvOverrides(config)
+	
+	// 应用格式特定的配置覆盖（基于配置文件名）
+	applyFormatSpecificConfig(config, configPath)
 
 	cm.config = config
 	cm.configPath = configPath
@@ -533,11 +538,47 @@ func LoadConfig(configPath string) (*types.Config, error) {
 		if _, err := toml.Decode(string(data), &config); err != nil {
 			return nil, fmt.Errorf("TOML解析失败: %w", err)
 		}
+	case ".xml":
+		// 对于XML配置文件，我们需要特殊处理，因为XML结构通常与Go结构体不匹配
+		// 这里我们使用一个简化的XML解析，或者返回错误提示用户使用支持的格式
+		return nil, fmt.Errorf("XML配置文件格式暂不支持，请使用YAML、JSON或TOML格式")
 	default:
 		return nil, fmt.Errorf("不支持的配置文件格式: %s", ext)
 	}
 
+	// 根据配置文件名应用相应的格式配置
+	applyFormatSpecificConfig(&config, configPath)
+
 	return &config, nil
+}
+
+// applyFormatSpecificConfig 根据配置文件名应用相应的格式配置
+func applyFormatSpecificConfig(config *types.Config, configPath string) {
+	// 将配置文件名转换为小写以便匹配
+	configName := strings.ToLower(filepath.Base(configPath))
+	
+	// 根据配置文件名中是否包含特定格式名称来应用相应的格式配置
+	if strings.Contains(configName, "xml") {
+		// 如果配置文件名包含xml，应用XML格式配置
+		if config.Formats.XML.Enabled {
+			config.Output.DefaultFormat = "xml"
+		}
+	} else if strings.Contains(configName, "json") {
+		// 如果配置文件名包含json，应用JSON格式配置
+		if config.Formats.JSON.Enabled {
+			config.Output.DefaultFormat = "json"
+		}
+	} else if strings.Contains(configName, "toml") {
+		// 如果配置文件名包含toml，应用TOML格式配置
+		if config.Formats.TOML.Enabled {
+			config.Output.DefaultFormat = "toml"
+		}
+	} else if strings.Contains(configName, "markdown") || strings.Contains(configName, "md") {
+		// 如果配置文件名包含markdown或md，应用Markdown格式配置
+		if config.Formats.Markdown.Enabled {
+			config.Output.DefaultFormat = "markdown"
+		}
+	}
 }
 
 // GetDefaultConfig 获取默认配置

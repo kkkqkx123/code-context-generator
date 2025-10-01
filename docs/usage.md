@@ -75,9 +75,21 @@ go build -o code-context-generator-tui cmd/tui/main.go
 
 # 使用自定义配置
 ./code-context-generator generate -c config.toml
+
+# 使用智能格式覆盖配置
+./code-context-generator generate -c config-json.yaml  # 自动使用JSON格式
+./code-context-generator generate -c config-xml.yaml  # 自动使用XML格式
 ```
 
 ## 配置文件
+
+### 智能格式覆盖
+工具支持基于配置文件名的智能格式识别功能。当配置文件名包含特定格式关键词时，会自动应用对应的格式配置：
+
+- `config-json.yaml` - 自动设置 `output.format = "json"`
+- `config-xml.yaml` - 自动设置 `output.format = "xml"`
+- `config-toml.yaml` - 自动设置 `output.format = "toml"`
+- `config-markdown.yaml` 或 `config-md.yaml` - 自动设置 `output.format = "markdown"`
 
 ### 基础配置
 ```toml

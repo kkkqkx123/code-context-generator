@@ -39,9 +39,10 @@
 
 ### 🎯 核心功能
 - **多格式输出**: 支持 JSON、XML、TOML、Markdown 格式
+- **智能格式识别**: 基于配置文件名自动应用对应格式配置（如 config-json.yaml 自动使用 JSON 格式）
 - **智能文件选择**: 交互式文件/目录选择界面
 - **自动补全**: 文件路径智能补全功能
-- **配置管理**: 灵活的配置系统，支持环境变量覆盖
+- **配置管理**: 灵活的配置系统，支持环境变量覆盖和格式覆盖
 - **二进制文件处理**: 智能检测并处理二进制文件，避免内容错误
 
 ### 🚀 高级特性
@@ -84,6 +85,15 @@ exclude_binary = true  # 排除二进制文件
 theme = "default"
 show_progress = true
 ```
+
+#### 智能格式覆盖配置
+工具支持基于配置文件名的智能格式识别：
+- `config-json.yaml` - 自动应用 JSON 格式配置
+- `config-xml.yaml` - 自动应用 XML 格式配置  
+- `config-toml.yaml` - 自动应用 TOML 格式配置
+- `config-markdown.yaml` - 自动应用 Markdown 格式配置
+
+例如，使用 `config-json.yaml` 时，工具会自动设置 `output.format = "json"` 并应用 JSON 相关的配置选项。
 
 #### 完整配置示例
 详见[使用文档](usage.md#配置文件详解)中的配置详解部分。

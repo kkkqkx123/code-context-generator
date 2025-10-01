@@ -68,7 +68,13 @@ docker run -it --rm -v $(pwd):/workspace -w /workspace code-context-generator:la
 
 # 测试基本功能
 ./code-context-generator generate --help
-```docker-compose up -d
+```
+
+### Docker Compose 部署
+
+#### 启动服务
+```bash
+docker-compose up -d
 
 # 查看日志
 docker-compose logs -f code-context-generator
@@ -113,6 +119,15 @@ include_hash = true
 theme = "dark"
 show_progress = true
 show_preview = true
+
+#### 智能格式覆盖配置
+工具支持基于配置文件名的智能格式识别功能：
+- `config-json.yaml` - 自动应用 JSON 格式配置
+- `config-xml.yaml` - 自动应用 XML 格式配置
+- `config-toml.yaml` - 自动应用 TOML 格式配置
+- `config-markdown.yaml` - 自动应用 Markdown 格式配置
+
+例如，创建 `config-json.yaml` 文件时，工具会自动设置 `output.format = "json"` 并应用 JSON 相关的配置选项。
 
 [performance]
 max_workers = 8

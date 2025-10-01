@@ -49,23 +49,44 @@ go install github.com/go-delve/delve/cmd/dlv@latest
 code-context-generator/
 ├── cmd/                    # 应用程序入口
 │   ├── cli/               # CLI应用入口
-│   │   └── main.go
+│   │   ├── main.go
+│   │   └── config.yaml
 │   └── tui/               # TUI应用入口
-│       ├── main.go
-│       └── models.go
+│   │   ├── main.go
+│   │   └── models/
 ├── internal/              # 内部包
 │   ├── autocomplete/      # 自动补全功能
-│   │   └── autocomplete.go
+│   │   ├── autocomplete.go
+│   │   └── autocomplete_test.go
 │   ├── config/           # 配置管理
-│   │   └── config.go
+│   │   ├── config.go
+│   │   ├── config.yaml
+│   │   └── config_test.go
+│   ├── env/              # 环境变量处理
+│   │   └── env.go
 │   ├── filesystem/       # 文件系统操作
-│   │   └── filesystem.go
+│   │   ├── filesystem.go
+│   │   └── filesystem_test.go
 │   ├── formatter/        # 格式转换
-│   │   └── formatter.go
+│   │   ├── formatter.go
+│   │   └── formatter_test.go
 │   ├── selector/         # 文件选择器
-│   │   └── selector.go
+│   │   ├── file_selector.go
+│   │   ├── file_utils.go
+│   │   ├── pattern_matcher.go
+│   │   ├── selector.go
+│   │   └── selector_test.go
 │   └── utils/            # 工具函数
-│       └── utils.go
+│   │   ├── color.go
+│   │   ├── encoding.go
+│   │   ├── file.go
+│   │   ├── path.go
+│   │   ├── regex.go
+│   │   ├── string.go
+│   │   ├── time.go
+│   │   ├── utils.go
+│   │   ├── utils_test.go
+│   │   └── validation.go
 ├── pkg/                   # 可复用的包
 │   ├── constants/        # 常量定义
 │   │   └── constants.go
@@ -73,9 +94,8 @@ code-context-generator/
 │       └── types.go
 ├── configs/               # 配置文件模板
 ├── docs/                  # 文档
+├── examples/              # 使用示例和配置示例
 ├── tests/                 # 测试文件
-├── scripts/               # 构建和部署脚本
-├── Makefile              # 构建自动化
 ├── go.mod                # Go模块定义
 ├── go.sum                # 依赖校验
 ├── README.md             # 项目说明

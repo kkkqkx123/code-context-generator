@@ -50,12 +50,9 @@ var rootCmd = &cobra.Command{
 				return fmt.Errorf("加载配置文件失败: %w", err)
 			}
 		} else {
-			// 尝试加载默认配置文件
+			// 尝试加载默认配置文件，如果不存在则使用默认配置，不再自动创建
 			defaultConfigPath := "config.yaml"
-			if err := configManager.Load(defaultConfigPath); err != nil {
-				// 如果默认配置文件不存在，使用默认配置
-				fmt.Println("使用默认配置")
-			}
+			configManager.Load(defaultConfigPath) // 忽略错误，使用默认配置
 		}
 
 		cfg = configManager.Get()
@@ -96,13 +93,13 @@ var configShowCmd = &cobra.Command{
 	RunE:  runConfigShow,
 }
 
-// configInitCmd 初始化配置
-var configInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "初始化配置文件",
-	Long:  "创建默认配置文件",
-	RunE:  runConfigInit,
-}
+// configInitCmd 初始化配置 (已移除 - 不再自动创建配置文件)
+// var configInitCmd = &cobra.Command{
+// 	Use:   "init",
+// 	Short: "初始化配置文件",
+// 	Long:  "创建默认配置文件",
+// 	RunE:  runConfigInit,
+// }
 
 // autocompleteCmd 自动补全命令
 var autocompleteCmd = &cobra.Command{
@@ -123,7 +120,7 @@ func init() {
 
 	// 配置命令子命令
 	configCmd.AddCommand(configShowCmd)
-	configCmd.AddCommand(configInitCmd)
+	// configCmd.AddCommand(configInitCmd) // 已移除 - 不再提供配置文件初始化功能
 
 	// 全局标志
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "配置文件路径")
@@ -430,20 +427,20 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runConfigInit 运行配置初始化命令
-func runConfigInit(cmd *cobra.Command, args []string) error {
-	// 初始化配置
-	configManager := config.NewManager()
-	cfg = configManager.Get()
+// runConfigInit 运行配置初始化命令 (已移除 - 不再自动创建配置文件)
+// func runConfigInit(cmd *cobra.Command, args []string) error {
+// 	// 初始化配置
+// 	configManager := config.NewManager()
+// 	cfg = configManager.Get()
 
-	// 保存配置到文件
-	if err := configManager.Save("config.yaml", "yaml"); err != nil {
-		return fmt.Errorf("保存配置文件失败: %w", err)
-	}
+// 	// 保存配置到文件
+// 	if err := configManager.Save("config.yaml", "yaml"); err != nil {
+// 		return fmt.Errorf("保存配置文件失败: %w", err)
+// 	}
 
-	fmt.Println(utils.SuccessColor("配置文件已创建: config.yaml"))
-	return nil
-}
+// 	fmt.Println(utils.SuccessColor("配置文件已创建: config.yaml"))
+// 	return nil
+// }
 
 // runAutocomplete 运行自动补全命令
 func runAutocomplete(cmd *cobra.Command, args []string) error {

@@ -1,0 +1,43 @@
+formats:
+  xml:
+    enabled: false
+  json:
+    enabled: true
+    structure:
+      file: source_file
+      folder: directory
+      files: all_files
+    fields:
+      path: relative_path
+      content: file_content
+      filename: file_name
+  toml:
+    enabled: false
+  markdown:
+    enabled: false
+
+output:
+  default_format: json
+  output_dir: json_output
+  filename_template: "context_{{.timestamp}}.{{.extension}}"
+
+filters:
+  max_file_size: "2MB"
+  exclude_patterns:
+    - "*.tmp"
+    - "*.log"
+    - "*.swp"
+    - ".*"
+    - "node_modules/"
+    - "target/"
+    - "dist/"
+    - "build/"
+    - ".env"
+    - ".git/"
+    - ".vscode/"
+    - ".idea/"
+    - "__pycache__/"
+    - "*.pyc"
+    - ".venv"
+    - "*.class"
+  exclude_binary: false

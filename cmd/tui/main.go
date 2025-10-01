@@ -77,11 +77,8 @@ func init() {
 	// 初始化配置管理器
 	configManager := config.NewManager()
 	
-	// 尝试加载配置文件，如果不存在则使用默认配置
-	if err := configManager.Load("config.yaml"); err != nil {
-		// 使用默认配置
-		fmt.Printf("使用默认配置: %v\n", err)
-	}
+	// 尝试加载配置文件，如果不存在则使用默认配置，不再自动创建
+	configManager.Load("config.yaml") // 忽略错误，使用默认配置
 	
 	cfg = configManager.Get()
 	models.SetConfig(cfg)
