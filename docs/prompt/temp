@@ -2,7 +2,7 @@
 
 TUI界面加载文件列表失败
 
-配置不生效
+TUI界面中配置不生效
 (TraeAI-19) D:\ide\tool\code-context-generator [0:0] $ .\test-tui.exe
 Caught panic:
 
@@ -32,8 +32,18 @@ github.com/charmbracelet/bubbletea.(*Program).Run(0xc000102000)
 main.main()
         D:/ide/tool/code-context-generator/cmd/tui/main.go:85 +0x9a
 
-无法在GUI界面中切换输出格式。可以参考现在递归扫描、包含隐藏文件的选型
+无法在TUI界面中切换输出格式。可以参考现在递归扫描、包含隐藏文件的选型
 
 添加日志服务模块，将日志存储在logs目录中，在正常退出时自动清除日志
 
-分页大小太短，需要根据当前窗口大小动态调整分页大小
+检查当前.env配置的实现。配置应当独立为.env文件，而非以参数默认值的形式散布在代码中
+
+分页大小太短，需要根据当前窗口大小动态调整分页大小。且可以在配置文件中人为指定
+
+自动补全应当仅限于TUI界面，CLI中不需要。TUI界面应当增加输入框，能够输入文件并添加到扫描列表中(选定后自动选中)
+TUI界面新增调整文件、目录顺序
+
+当前正确的配置文件应当统一使用internal\config\config.yaml，不再支持json、xml格式的配置文件。
+此外，检查配置文件是否为空并生成配置文件的模块将配置文件输出到根目录，且同时创建3种格式，需要修改为输出到internal\config目录中，且仅输出yaml格式
+读取规则时3种格式文件依然都有效。
+启动时验证规则是否符合要求，不符合要求则在GUI中提示用户修改配置文件。

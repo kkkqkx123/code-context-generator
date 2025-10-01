@@ -1,3 +1,5 @@
 ref
 AGENTS.md.bak
 *.exe
+.env
+!.env.example

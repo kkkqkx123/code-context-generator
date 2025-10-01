@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"code-context-generator/cmd/tui/models"
+	"code-context-generator/internal/config"
+	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/pkg/types"
 
@@ -67,9 +69,21 @@ type MainModel struct {
 
 // 初始化函数
 func init() {
-	// 使用默认配置
-	cfg = getDefaultConfig()
-	// 设置全局配置到models包
+	// 首先加载.env文件（如果存在）
+	if err := env.LoadEnv(""); err != nil {
+		fmt.Printf("警告: 加载.env文件失败: %v\n", err)
+	}
+
+	// 初始化配置管理器
+	configManager := config.NewManager()
+	
+	// 尝试加载配置文件，如果不存在则使用默认配置
+	if err := configManager.Load("config.yaml"); err != nil {
+		// 使用默认配置
+		fmt.Printf("使用默认配置: %v\n", err)
+	}
+	
+	cfg = configManager.Get()
 	models.SetConfig(cfg)
 }
 
@@ -110,7 +124,7 @@ func initialModel() MainModel {
 	fileSelector: models.NewFileSelectorModel("."),
 	progressBar:  models.NewProgressModel(),
 	resultViewer: models.NewResultViewerModel(),
-	configEditor: models.NewConfigEditorModel(nil),
+	configEditor: models.NewConfigEditorModel(cfg),
 	}
 }
 

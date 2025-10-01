@@ -40,9 +40,7 @@ formats:
       code_block: "```"
       file_header: "##"
       folder_header: "###"
-    fields:
-      content: ""
-      path: ""
+    fields: {}
     template: ""
     formatting:
       add_toc: false
@@ -70,15 +68,36 @@ filters:
   - "*.log"
   - "*.swp"
   - .*
+  - node_modules/
+  - target/
+  - dist/
+  - build/
+  - .env
+  - .git/
+  - .vscode/
+  - .idea/
+  - __pycache__/
+  - "*.pyc"
+  - .venv
+  - "*.class"
   include_patterns: []
   max_depth: 0
   follow_symlinks: false
+  exclude_binary: true
 output:
+  format: ""
+  file_path: ""
+  encoding: ""
   default_format: xml
   output_dir: ""
   filename_template: context_{{.timestamp}}.{{.extension}}
   timestamp_format: "20060102_150405"
 ui:
+  theme: ""
+  show_progress: false
+  show_size: false
+  show_date: false
+  show_preview: false
   selector:
     show_hidden: false
     show_size: true
@@ -87,3 +106,22 @@ ui:
     enabled: true
     min_chars: 1
     max_suggestions: 10
+file_processing:
+  includehidden: false
+  maxfilesize: 0
+  maxdepth: 0
+  excludepatterns: []
+  includepatterns: []
+  includecontent: false
+  includehash: false
+performance:
+  maxworkers: 0
+  buffersize: 0
+  cacheenabled: false
+  cachesize: 0
+logging:
+  level: ""
+  filepath: ""
+  maxsize: 0
+  maxbackups: 0
+  maxage: 0

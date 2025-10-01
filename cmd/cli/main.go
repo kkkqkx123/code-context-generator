@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"code-context-generator/internal/autocomplete"
+	"code-context-generator/internal/config"
+	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/internal/formatter"
 	"code-context-generator/internal/selector"
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/types"
-
-	"github.com/goccy/go-yaml"
 
 	"github.com/spf13/cobra"
 )
@@ -36,43 +36,29 @@ var rootCmd = &cobra.Command{
 自动补全功能，以及丰富的配置选项。`,
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// 加载配置
-		// 加载配置
-		cfg = &types.Config{
-			Output: types.OutputConfig{
-				Format:   "json",
-				Encoding: "utf-8",
-			},
-			FileProcessing: types.FileProcessingConfig{
-				IncludeHidden:   false,
-				MaxFileSize:     10 * 1024 * 1024,
-				MaxDepth:        0,
-				ExcludePatterns: []string{},
-				IncludePatterns: []string{},
-				IncludeContent:  false,
-				IncludeHash:     false,
-			},
-			UI: types.UIConfig{
-				Theme:        "default",
-				ShowProgress: true,
-				ShowSize:     true,
-				ShowDate:     true,
-				ShowPreview:  true,
-			},
-			Performance: types.PerformanceConfig{
-				MaxWorkers:   4,
-				BufferSize:   1024,
-				CacheEnabled: true,
-				CacheSize:    100,
-			},
-			Logging: types.LoggingConfig{
-				Level:      "info",
-				FilePath:   "",
-				MaxSize:    10,
-				MaxBackups: 3,
-				MaxAge:     7,
-			},
+		// 首先加载.env文件（如果存在）
+		if err := env.LoadEnv(""); err != nil {
+			fmt.Printf("警告: 加载.env文件失败: %v\n", err)
 		}
+
+		// 加载配置
+		configManager := config.NewManager()
+
+		// 如果有指定配置文件路径，使用它
+		if configPath != "" {
+			if err := configManager.Load(configPath); err != nil {
+				return fmt.Errorf("加载配置文件失败: %w", err)
+			}
+		} else {
+			// 尝试加载默认配置文件
+			defaultConfigPath := "config.yaml"
+			if err := configManager.Load(defaultConfigPath); err != nil {
+				// 如果默认配置文件不存在，使用默认配置
+				fmt.Println("使用默认配置")
+			}
+		}
+
+		cfg = configManager.Get()
 		return nil
 	},
 }
@@ -430,62 +416,16 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 
 // runConfigInit 运行配置初始化命令
 func runConfigInit(cmd *cobra.Command, args []string) error {
-	// 创建默认配置
-	defaultConfig := &types.Config{
-		Output: types.OutputConfig{
-			Format:   "json",
-			FilePath: "",
-			Encoding: "utf-8",
-		},
-		FileProcessing: types.FileProcessingConfig{
-			IncludeHidden: false,
-			MaxFileSize:   10 * 1024 * 1024, // 10MB
-			MaxDepth:      0,
-			ExcludePatterns: []string{
-				"*.exe", "*.dll", "*.so", "*.dylib",
-				"*.pyc", "*.pyo", "*.pyd",
-				"*.class", "*.jar",
-				"*.o", "*.a", "*.lib",
-				"*.iso", "*.img", "*.dmg",
-				"node_modules", ".git", ".svn", ".hg",
-				"__pycache__", "*.egg-info", "dist", "build",
-			},
-			IncludePatterns: []string{},
-			IncludeContent:  false,
-			IncludeHash:     false,
-		},
-		UI: types.UIConfig{
-			Theme:        "default",
-			ShowProgress: true,
-			ShowSize:     true,
-			ShowDate:     true,
-			ShowPreview:  true,
-		},
-		Performance: types.PerformanceConfig{
-			MaxWorkers:   4,
-			BufferSize:   1024,
-			CacheEnabled: true,
-			CacheSize:    100,
-		},
-		Logging: types.LoggingConfig{
-			Level:      "info",
-			FilePath:   "",
-			MaxSize:    10,
-			MaxBackups: 3,
-			MaxAge:     7,
-		},
+	// 初始化配置
+	configManager := config.NewManager()
+	cfg = configManager.Get()
+
+	// 保存配置到文件
+	if err := configManager.Save("config.yaml", "yaml"); err != nil {
+		return fmt.Errorf("保存配置文件失败: %w", err)
 	}
 
-	// 保存配置
-	data, err := yaml.Marshal(defaultConfig)
-	if err != nil {
-		return fmt.Errorf("序列化配置失败: %w", err)
-	}
-	if err := os.WriteFile("config.toml", data, 0644); err != nil {
-		return fmt.Errorf("保存配置失败: %w", err)
-	}
-
-	fmt.Println(utils.SuccessColor("配置文件已创建: config.toml"))
+	fmt.Println(utils.SuccessColor("配置文件已创建: config.yaml"))
 	return nil
 }
 
@@ -572,38 +512,29 @@ func generateConfigOutput(cfg *types.Config) string {
 	output.WriteString("当前配置:\n")
 	output.WriteString("==================\n\n")
 
-	output.WriteString(fmt.Sprintf("输出格式: %s\n", cfg.Output.Format))
-	output.WriteString(fmt.Sprintf("编码: %s\n", cfg.Output.Encoding))
-	if cfg.Output.FilePath != "" {
-		output.WriteString(fmt.Sprintf("输出文件: %s\n", cfg.Output.FilePath))
-	}
+	output.WriteString(fmt.Sprintf("默认格式: %s\n", cfg.Output.DefaultFormat))
+	output.WriteString(fmt.Sprintf("输出目录: %s\n", cfg.Output.OutputDir))
+	output.WriteString(fmt.Sprintf("文件名模板: %s\n", cfg.Output.FilenameTemplate))
 
 	output.WriteString("\n文件处理:\n")
-	output.WriteString(fmt.Sprintf("  包含隐藏文件: %v\n", cfg.FileProcessing.IncludeHidden))
-	output.WriteString(fmt.Sprintf("  最大文件大小: %d 字节\n", cfg.FileProcessing.MaxFileSize))
-	output.WriteString(fmt.Sprintf("  最大深度: %d\n", cfg.FileProcessing.MaxDepth))
-	output.WriteString(fmt.Sprintf("  包含内容: %v\n", cfg.FileProcessing.IncludeContent))
-	output.WriteString(fmt.Sprintf("  包含哈希: %v\n", cfg.FileProcessing.IncludeHash))
+	output.WriteString(fmt.Sprintf("  最大文件大小: %s\n", cfg.Filters.MaxFileSize))
+	output.WriteString(fmt.Sprintf("  最大深度: %d\n", cfg.Filters.MaxDepth))
+	output.WriteString(fmt.Sprintf("  跟随符号链接: %v\n", cfg.Filters.FollowSymlinks))
+	output.WriteString(fmt.Sprintf("  排除二进制文件: %v\n", cfg.Filters.ExcludeBinary))
 
-	if len(cfg.FileProcessing.ExcludePatterns) > 0 {
+	if len(cfg.Filters.ExcludePatterns) > 0 {
 		output.WriteString("  排除模式:\n")
-		for _, pattern := range cfg.FileProcessing.ExcludePatterns {
+		for _, pattern := range cfg.Filters.ExcludePatterns {
 			output.WriteString(fmt.Sprintf("    - %s\n", pattern))
 		}
 	}
 
-	if len(cfg.FileProcessing.IncludePatterns) > 0 {
+	if len(cfg.Filters.IncludePatterns) > 0 {
 		output.WriteString("  包含模式:\n")
-		for _, pattern := range cfg.FileProcessing.IncludePatterns {
+		for _, pattern := range cfg.Filters.IncludePatterns {
 			output.WriteString(fmt.Sprintf("    - %s\n", pattern))
 		}
 	}
-
-	output.WriteString("\n性能:\n")
-	output.WriteString(fmt.Sprintf("  最大工作线程: %d\n", cfg.Performance.MaxWorkers))
-	output.WriteString(fmt.Sprintf("  缓冲区大小: %d\n", cfg.Performance.BufferSize))
-	output.WriteString(fmt.Sprintf("  缓存启用: %v\n", cfg.Performance.CacheEnabled))
-	output.WriteString(fmt.Sprintf("  缓存大小: %d\n", cfg.Performance.CacheSize))
 
 	return output.String()
 }

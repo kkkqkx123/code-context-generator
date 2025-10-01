@@ -13,6 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/goccy/go-yaml"
+	"code-context-generator/internal/env"
 	"code-context-generator/pkg/constants"
 	"code-context-generator/pkg/types"
 )
@@ -52,6 +53,12 @@ func (cm *ConfigManager) Load(configPath string) error {
 		configPath = constants.DefaultConfigFile
 	}
 
+	// 首先加载.env文件（如果存在）
+	if err := env.LoadEnv(""); err != nil {
+		// 如果.env文件加载失败，记录警告但不中断程序
+		fmt.Printf("警告: 加载.env文件失败: %v\n", err)
+	}
+
 	// 检查文件是否存在
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// 如果文件不存在，创建默认配置
@@ -62,6 +69,9 @@ func (cm *ConfigManager) Load(configPath string) error {
 	if err != nil {
 		return fmt.Errorf("加载配置文件失败: %w", err)
 	}
+
+	// 应用环境变量覆盖
+	cm.applyEnvOverrides(config)
 
 	cm.config = config
 	cm.configPath = configPath
@@ -142,24 +152,59 @@ func (cm *ConfigManager) Save(configPath string, format string) error {
 
 // GetEnvOverrides 获取环境变量覆盖
 func (cm *ConfigManager) GetEnvOverrides() map[string]string {
-	overrides := make(map[string]string)
+	return env.GetAllEnvVars()
+}
+
+// applyEnvOverrides 应用环境变量覆盖到配置
+func (cm *ConfigManager) applyEnvOverrides(config *types.Config) {
+	envVars := env.GetAllEnvVars()
 	
-	// 获取格式相关的环境变量
-	if format := os.Getenv(constants.EnvPrefix + "DEFAULT_FORMAT"); format != "" {
-		overrides["default_format"] = format
+	// 应用输出格式覆盖
+	if format, ok := envVars["CODE_CONTEXT_DEFAULT_FORMAT"]; ok && format != "" {
+		config.Output.DefaultFormat = format
 	}
 	
-	// 获取输出相关的环境变量
-	if outputDir := os.Getenv(constants.EnvPrefix + "OUTPUT_DIR"); outputDir != "" {
-		overrides["output_dir"] = outputDir
+	// 应用输出目录覆盖
+	if outputDir, ok := envVars["CODE_CONTEXT_OUTPUT_DIR"]; ok && outputDir != "" {
+		config.Output.OutputDir = outputDir
 	}
 	
-	// 获取过滤相关的环境变量
-	if maxDepth := os.Getenv(constants.EnvPrefix + "MAX_DEPTH"); maxDepth != "" {
-		overrides["max_depth"] = maxDepth
+	// 应用文件名模板覆盖
+	if filenameTemplate, ok := envVars["CODE_CONTEXT_FILENAME_TEMPLATE"]; ok && filenameTemplate != "" {
+		config.Output.FilenameTemplate = filenameTemplate
 	}
 	
-	return overrides
+	// 应用时间戳格式覆盖
+	if timestampFormat, ok := envVars["CODE_CONTEXT_TIMESTAMP_FORMAT"]; ok && timestampFormat != "" {
+		config.Output.TimestampFormat = timestampFormat
+	}
+	
+	// 应用最大文件大小覆盖
+	if maxFileSize, ok := envVars["CODE_CONTEXT_MAX_FILE_SIZE"]; ok && maxFileSize != "" {
+		config.Filters.MaxFileSize = maxFileSize
+	}
+	
+	// 应用最大深度覆盖
+	if maxDepth, ok := envVars["CODE_CONTEXT_MAX_DEPTH"]; ok && maxDepth != "" {
+		if depth, err := strconv.Atoi(maxDepth); err == nil {
+			config.Filters.MaxDepth = depth
+		}
+	}
+	
+	// 应用排除模式覆盖
+	if excludePatterns, ok := envVars["CODE_CONTEXT_EXCLUDE_PATTERNS"]; ok && excludePatterns != "" {
+		config.Filters.ExcludePatterns = strings.Split(excludePatterns, ",")
+	}
+	
+	// 应用跟随符号链接覆盖
+	if followSymlinks, ok := envVars["CODE_CONTEXT_FOLLOW_SYMLINKS"]; ok && followSymlinks != "" {
+		config.Filters.FollowSymlinks = followSymlinks == "true"
+	}
+	
+	// 应用排除二进制文件覆盖
+	if excludeBinary, ok := envVars["CODE_CONTEXT_EXCLUDE_BINARY"]; ok && excludeBinary != "" {
+		config.Filters.ExcludeBinary = excludeBinary == "true"
+	}
 }
 
 // GenerateOutput 生成输出内容

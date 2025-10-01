@@ -107,11 +107,10 @@ func (m *ConfigEditorModel) View() string {
 func (m *ConfigEditorModel) renderOutputConfig() string {
 	var content strings.Builder
 
-	content.WriteString(NormalStyle.Render(fmt.Sprintf("格式: %s\n", m.config.Output.Format)))
-		content.WriteString(NormalStyle.Render(fmt.Sprintf("编码: %s\n", m.config.Output.Encoding)))
-		if m.config.Output.FilePath != "" {
-			content.WriteString(NormalStyle.Render(fmt.Sprintf("输出文件: %s\n", m.config.Output.FilePath)))
-		}
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("默认格式: %s\n", m.config.Output.DefaultFormat)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("输出目录: %s\n", m.config.Output.OutputDir)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("文件名模板: %s\n", m.config.Output.FilenameTemplate)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("时间戳格式: %s\n", m.config.Output.TimestampFormat)))
 
 	return content.String()
 }
@@ -119,11 +118,10 @@ func (m *ConfigEditorModel) renderOutputConfig() string {
 func (m *ConfigEditorModel) renderFileProcessingConfig() string {
 	var content strings.Builder
 
-	content.WriteString(NormalStyle.Render(fmt.Sprintf("包含隐藏文件: %v\n", m.config.FileProcessing.IncludeHidden)))
-		content.WriteString(NormalStyle.Render(fmt.Sprintf("最大文件大小: %d\n", m.config.FileProcessing.MaxFileSize)))
-		content.WriteString(NormalStyle.Render(fmt.Sprintf("最大深度: %d\n", m.config.FileProcessing.MaxDepth)))
-		content.WriteString(NormalStyle.Render(fmt.Sprintf("包含内容: %v\n", m.config.FileProcessing.IncludeContent)))
-		content.WriteString(NormalStyle.Render(fmt.Sprintf("包含哈希: %v\n", m.config.FileProcessing.IncludeHash)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("最大文件大小: %s\n", m.config.Filters.MaxFileSize)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("最大深度: %d\n", m.config.Filters.MaxDepth)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("跟随符号链接: %v\n", m.config.Filters.FollowSymlinks)))
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("排除二进制文件: %v\n", m.config.Filters.ExcludeBinary)))
 
 	return content.String()
 }
