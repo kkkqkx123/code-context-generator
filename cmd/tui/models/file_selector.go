@@ -100,10 +100,28 @@ func (m *FileSelectorModel) View() string {
 
 	// 标题
 	content.WriteString(TitleStyle.Render("文件选择器"))
-	content.WriteString("\n\n")
+	content.WriteString("\n")
 
-	// 路径
-	content.WriteString(NormalStyle.Render(fmt.Sprintf("路径: %s", m.path)))
+	// 当前路径
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("当前路径: %s", m.path)))
+	content.WriteString("\n")
+
+	// 分页信息
+	visibleHeight := m.height - 6
+	if visibleHeight < 3 {
+		visibleHeight = 3
+	}
+	if visibleHeight > 20 {
+		visibleHeight = 20
+	}
+	
+	startItem := m.scrollOffset + 1
+	endItem := m.scrollOffset + visibleHeight
+	if endItem > len(m.items) {
+		endItem = len(m.items)
+	}
+	
+	content.WriteString(NormalStyle.Render(fmt.Sprintf("显示: %d-%d / %d 个项目", startItem, endItem, len(m.items))))
 	content.WriteString("\n\n")
 
 	// 文件列表
@@ -133,10 +151,10 @@ func (m *FileSelectorModel) moveCursor(direction int) {
 	
 	m.cursor += direction
 	if m.cursor < 0 {
-		m.cursor = 0
+		m.cursor = len(m.items) - 1 // 循环到末尾
 	}
 	if m.cursor >= len(m.items) {
-		m.cursor = len(m.items) - 1
+		m.cursor = 0 // 循环到开头
 	}
 	m.updateScroll()
 }
@@ -177,10 +195,13 @@ func (m *FileSelectorModel) updateScroll() {
 		m.cursor = len(m.items) - 1
 	}
 	
-	// 计算可见区域高度
-	visibleHeight := m.height - 8 // 标题2行 + 路径2行 + 帮助信息2行 + 边距2行
-	if visibleHeight < 1 {
-		visibleHeight = 1
+	// 计算可见区域高度（与getVisibleItems保持一致）
+	visibleHeight := m.height - 6
+	if visibleHeight < 3 {
+		visibleHeight = 3
+	}
+	if visibleHeight > 20 {
+		visibleHeight = 20
 	}
 	
 	// 确保滚动偏移在有效范围内
@@ -210,20 +231,14 @@ func (m *FileSelectorModel) getVisibleItems() []selector.FileItem {
 		return []selector.FileItem{}
 	}
 	
-	// 确保最小高度为5，避免负数
-	if m.height <= 5 {
-		// 窗口太小，只显示少量项目
-		end := 3
-		if end > len(m.items) {
-			end = len(m.items)
-		}
-		return m.items[0:end]
-	}
-	
 	// 计算可见区域高度（减去标题、路径和帮助信息）
-	visibleHeight := m.height - 8 // 标题2行 + 路径2行 + 帮助信息2行 + 边距2行
-	if visibleHeight < 1 {
-		visibleHeight = 1
+	// 标题1行 + 路径1行 + 分页信息1行 + 文件列表 + 帮助信息1行 + 边距2行
+	visibleHeight := m.height - 6
+	if visibleHeight < 3 {
+		visibleHeight = 3 // 最小显示3个项目
+	}
+	if visibleHeight > 20 {
+		visibleHeight = 20 // 最大显示20个项目，实现分页
 	}
 	
 	start := m.scrollOffset
@@ -376,6 +391,20 @@ func (m *FileSelectorModel) renderFileItem(item selector.FileItem, isSelected, i
 		name += "/"
 	}
 
-	line := fmt.Sprintf("%s%s %s", prefix, icon, name)
+	// 显示完整路径（相对于当前目录）
+	relPath := item.Path
+	if strings.HasPrefix(item.Path, m.path) {
+		relPath = strings.TrimPrefix(item.Path, m.path)
+		if strings.HasPrefix(relPath, "/") || strings.HasPrefix(relPath, "\\") {
+			relPath = relPath[1:]
+		}
+	}
+	if relPath == "" {
+		relPath = name
+	} else {
+		relPath = name
+	}
+
+	line := fmt.Sprintf("%s%s %s", prefix, icon, relPath)
 	return style.Render(line)
 }

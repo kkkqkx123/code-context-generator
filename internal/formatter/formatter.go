@@ -97,6 +97,11 @@ func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
 
 // FormatFile 格式化单个文件
 func (f *JSONFormatter) FormatFile(file types.FileInfo) (string, error) {
+	// 如果是二进制文件，不显示内容
+	if file.IsBinary {
+		file.Content = "[二进制文件 - 内容未显示]"
+	}
+	
 	if f.config != nil && f.config.Fields != nil {
 		// 使用自定义字段映射
 		customFile := f.applyCustomFields(file)
@@ -179,6 +184,11 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 
 // FormatFile 格式化单个文件
 func (f *XMLFormatter) FormatFile(file types.FileInfo) (string, error) {
+	// 如果是二进制文件，不显示内容
+	if file.IsBinary {
+		file.Content = "[二进制文件 - 内容未显示]"
+	}
+	
 	output, err := xml.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("XML文件格式化失败: %w", err)
@@ -254,7 +264,14 @@ func (f *TOMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 	buf.WriteString(fmt.Sprintf("path = \"%s\"\n", file.Path))
 	buf.WriteString(fmt.Sprintf("name = \"%s\"\n", file.Name))
 	buf.WriteString(fmt.Sprintf("size = %d\n", file.Size))
-	buf.WriteString(fmt.Sprintf("content = \"%s\"\n", escapeTOMLString(file.Content)))
+	
+	// 如果是二进制文件，不显示内容
+	if file.IsBinary {
+		buf.WriteString("content = \"[二进制文件 - 内容未显示]\"\n")
+	} else {
+		buf.WriteString(fmt.Sprintf("content = \"%s\"\n", escapeTOMLString(file.Content)))
+	}
+	
 	buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", file.ModTime.Format(time.RFC3339)))
 
 	return buf.String(), nil
@@ -305,14 +322,18 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 			sb.WriteString(fmt.Sprintf("- **大小**: %d 字节\n", file.Size))
 			sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
 
-			// 添加代码块
-			sb.WriteString("```")
-			if ext := filepath.Ext(file.Path); ext != "" {
-				sb.WriteString(strings.TrimPrefix(ext, "."))
+			// 添加代码块（只针对文本文件）
+			if !file.IsBinary {
+				sb.WriteString("```")
+				if ext := filepath.Ext(file.Path); ext != "" {
+					sb.WriteString(strings.TrimPrefix(ext, "."))
+				}
+				sb.WriteString("\n")
+				sb.WriteString(file.Content)
+				sb.WriteString("\n```\n\n")
+			} else {
+				sb.WriteString("**[二进制文件 - 内容未显示]**\n\n")
 			}
-			sb.WriteString("\n")
-			sb.WriteString(file.Content)
-			sb.WriteString("\n```\n\n")
 		}
 	}
 
@@ -348,14 +369,18 @@ func (f *MarkdownFormatter) FormatFile(file types.FileInfo) (string, error) {
 	sb.WriteString(fmt.Sprintf("- **大小**: %d 字节\n", file.Size))
 	sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
 
-	// 添加代码块
-	sb.WriteString("```")
-	if ext := filepath.Ext(file.Path); ext != "" {
-		sb.WriteString(strings.TrimPrefix(ext, "."))
+	// 添加代码块（只针对文本文件）
+	if !file.IsBinary {
+		sb.WriteString("```")
+		if ext := filepath.Ext(file.Path); ext != "" {
+			sb.WriteString(strings.TrimPrefix(ext, "."))
+		}
+		sb.WriteString("\n")
+		sb.WriteString(file.Content)
+		sb.WriteString("\n```\n")
+	} else {
+		sb.WriteString("**[二进制文件 - 内容未显示]**\n")
 	}
-	sb.WriteString("\n")
-	sb.WriteString(file.Content)
-	sb.WriteString("\n```\n")
 
 	return sb.String(), nil
 }

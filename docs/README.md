@@ -7,6 +7,7 @@
 ### 📖 使用文档
 - [**使用文档**](usage.md) - 完整的使用指南，包含CLI和TUI的所有功能说明
 - [**快速开始**](../README.md) - 项目README，快速了解项目功能
+- [**二进制文件处理**](binary-file-handling.md) - 二进制文件检测和处理机制
 
 ### 🚀 部署文档
 - [**部署文档**](deployment.md) - 详细的部署指南，支持多种部署方式
@@ -41,6 +42,7 @@
 - **智能文件选择**: 交互式文件/目录选择界面
 - **自动补全**: 文件路径智能补全功能
 - **配置管理**: 灵活的配置系统，支持环境变量覆盖
+- **二进制文件处理**: 智能检测并处理二进制文件，避免内容错误
 
 ### 🚀 高级特性
 - **并发处理**: 基于 goroutine 池的高性能文件扫描
@@ -76,6 +78,7 @@ exclude_patterns = [
     "node_modules", ".git", ".svn", ".hg",
     "__pycache__", "*.egg-info", "dist", "build"
 ]
+exclude_binary = true  # 排除二进制文件
 
 [ui]
 theme = "default"
@@ -115,6 +118,12 @@ export CODE_CONTEXT_LOG_LEVEL=info
 
 # 包含文件内容和哈希值
 ./code-context-generator generate -C -H -f xml -o context.xml
+
+# 排除二进制文件（默认行为）
+./code-context-generator generate --exclude-binary
+
+# 包含二进制文件（不推荐）
+./code-context-generator generate --exclude-binary=false
 ```
 
 ### TUI使用示例
@@ -167,6 +176,9 @@ export CODE_CONTEXT_LOG_LEVEL=info
 #### Q: 如何包含隐藏文件？
 **A**: 使用 `-h` 或 `--hidden` 参数包含隐藏文件。
 
+#### Q: 如何处理二进制文件？
+**A**: 默认情况下工具会自动检测并排除二进制文件。使用 `--exclude-binary` 控制此行为（默认true）。二进制文件在输出中会显示为"[二进制文件 - 内容未显示]"。
+
 #### Q: 如何自定义输出格式？
 **A**: 通过配置文件中的模板系统自定义输出格式。
 
@@ -190,6 +202,7 @@ export CODE_CONTEXT_LOG_LEVEL=info
 - ✅ 支持JSON、XML、TOML、Markdown格式
 - ✅ 基础文件过滤功能
 - ✅ 配置管理系统
+- ✅ 二进制文件智能检测和处理
 
 ### 开发计划
 - 🔄 添加更多输出格式

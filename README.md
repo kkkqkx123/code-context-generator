@@ -9,6 +9,7 @@
 - **智能文件选择**: 交互式文件/目录选择界面
 - **自动补全**: 文件路径智能补全功能
 - **配置管理**: 灵活的配置系统，支持环境变量覆盖
+- **二进制文件处理**: 智能检测并处理二进制文件，避免内容错误
 
 ### 🚀 高级特性
 - **并发处理**: 基于 goroutine 池的高性能文件扫描
@@ -70,6 +71,12 @@ go build -o code-context-generator-tui cmd/tui/main.go
 
 # 限制文件大小
 ./code-context-generator generate -s 1048576  # 1MB
+
+# 排除二进制文件（默认行为）
+./code-context-generator generate --exclude-binary
+
+# 包含二进制文件（不推荐）
+./code-context-generator generate --exclude-binary=false
 ```
 
 #### 交互式选择
@@ -117,10 +124,15 @@ TUI界面提供：
 
 我们提供了完整的文档体系，帮助你快速上手和深入了解本工具：
 
+### 📚 文档
+
+我们提供了完整的文档体系，帮助你快速上手和深入了解本工具：
+
 ### 🎯 新用户
 - [**快速入门指南**](docs/quickstart.md) - 5分钟快速上手 🚀
 - [**使用文档**](docs/usage.md) - 完整的使用指南 📖
 - [**配置详解**](docs/usage.md#配置文件详解) - 配置项详细说明 ⚙️
+- [**二进制文件处理**](docs/binary-file-handling.md) - 二进制文件检测和处理机制 📁
 
 ### 🚀 部署和运维
 - [**部署文档**](docs/deployment.md) - 多种部署方式指南 📦
@@ -161,6 +173,7 @@ exclude_patterns = [
 include_patterns = []
 include_content = false
 include_hash = false
+exclude_binary = true  # 排除二进制文件
 
 [ui]
 theme = "default"
@@ -375,12 +388,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) - TUI框架
 - [Lipgloss](https://github.com/charmbracelet/lipgloss) - 样式库
 - 所有贡献者和支持者
-
-## 联系方式
-
-- **Issue**: [GitHub Issues](https://github.com/yourusername/code-context-generator/issues)
-- **邮件**: your.email@example.com
-- **文档**: [Wiki](https://github.com/yourusername/code-context-generator/wiki)
 
 ---
 

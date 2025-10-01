@@ -154,6 +154,7 @@ func init() {
 	generateCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
 	generateCmd.Flags().BoolP("content", "C", false, "包含文件内容")
 	generateCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
+	generateCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
 
 	// select命令标志
 	selectCmd.Flags().StringP("output", "o", "", "输出文件路径")
@@ -193,6 +194,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	maxSize, _ := cmd.Flags().GetInt("max-size")
 	content, _ := cmd.Flags().GetBool("content")
 	hash, _ := cmd.Flags().GetBool("hash")
+	excludeBinary, _ := cmd.Flags().GetBool("exclude-binary")
 
 	// 验证格式
 	if !isValidFormat(format) {
@@ -200,14 +202,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// 创建文件系统遍历器
-	walker := filesystem.NewFileSystemWalker(types.WalkOptions{
-		MaxDepth:        maxDepth,
-		MaxFileSize:     int64(maxSize),
-		ExcludePatterns: exclude,
-		IncludePatterns: include,
-		FollowSymlinks:  false,
-		ShowHidden:      hidden,
-	})
+	walker := filesystem.NewFileSystemWalker(types.WalkOptions{})
 
 	// 如果递归选项被禁用，设置最大深度为1
 	if !recursive && maxDepth == 0 {
@@ -219,7 +214,18 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		fmt.Printf("正在扫描路径: %s (递归: %v)\n", path, recursive)
 	}
 
-	result, err := walker.Walk(path, nil)
+	// 创建遍历选项
+	walkOptions := &types.WalkOptions{
+		MaxDepth:        maxDepth,
+		MaxFileSize:     int64(maxSize),
+		ExcludePatterns: exclude,
+		IncludePatterns: include,
+		FollowSymlinks:  false,
+		ShowHidden:      hidden,
+		ExcludeBinary:   excludeBinary,
+	}
+
+	result, err := walker.Walk(path, walkOptions)
 	if err != nil {
 		return fmt.Errorf("扫描失败: %w", err)
 	}
@@ -235,7 +241,10 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// ContextData 已经包含了所有需要的信息
-	// 添加根路径到metadata
+	// 初始化metadata map并添加根路径
+	if result.Metadata == nil {
+		result.Metadata = make(map[string]interface{})
+	}
 	result.Metadata["root_path"] = path
 	contextData := *result
 

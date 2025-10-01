@@ -66,7 +66,7 @@ func GetFileModTime(path string) (time.Time, error) {
 
 // IsTextFile 检查是否为文本文件
 func IsTextFile(path string) bool {
-	// 简单的文本文件检测
+	// 首先检查文件扩展名
 	ext := strings.ToLower(filepath.Ext(path))
 	textExtensions := []string{
 		".txt", ".md", ".json", ".xml", ".yaml", ".yml", ".toml",
@@ -80,6 +80,46 @@ func IsTextFile(path string) bool {
 			return true
 		}
 	}
+
+	// 如果没有扩展名，尝试读取文件内容来判断
+	if ext == "" {
+		file, err := os.Open(path)
+		if err != nil {
+			return false // 无法打开文件，假设为二进制文件
+		}
+		defer file.Close()
+
+		// 读取前512字节来判断是否为文本文件
+		buffer := make([]byte, 512)
+		n, err := file.Read(buffer)
+		if err != nil && err != io.EOF {
+			return false // 读取错误，假设为二进制文件
+		}
+
+		// 检查是否包含null字节（二进制文件的标志）
+		for i := 0; i < n; i++ {
+			if buffer[i] == 0 {
+				return false // 包含null字节，是二进制文件
+			}
+		}
+
+		// 检查是否包含可打印字符
+		printableCount := 0
+		for i := 0; i < n; i++ {
+			b := buffer[i]
+			if b >= 32 && b <= 126 { // 可打印ASCII字符
+				printableCount++
+			} else if b == 9 || b == 10 || b == 13 { // tab, newline, carriage return
+				printableCount++
+			}
+		}
+
+		// 如果大部分字符都是可打印的，认为是文本文件
+		if n > 0 && float64(printableCount)/float64(n) > 0.8 {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -385,6 +425,31 @@ func SafePathJoin(base, elem string) (string, error) {
 	}
 	
 	return joined, nil
+}
+
+// ReadFileContent 读取文件内容（带大小限制）
+func ReadFileContent(path string, maxSize int64) (string, bool, error) {
+	// 获取文件信息
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", false, err
+	}
+
+	// 检查文件大小
+	if maxSize > 0 && info.Size() > maxSize {
+		return "", false, fmt.Errorf("文件大小超过限制: %d > %d", info.Size(), maxSize)
+	}
+
+	// 读取文件内容
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", false, fmt.Errorf("读取文件失败: %w", err)
+	}
+
+	// 检测是否为二进制文件
+	isBinary := !IsTextFile(path)
+
+	return string(content), isBinary, nil
 }
 
 // ColorUtils 颜色工具函数

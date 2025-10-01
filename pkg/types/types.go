@@ -102,6 +102,7 @@ type FiltersConfig struct {
 	IncludePatterns []string `yaml:"include_patterns" json:"include_patterns" toml:"include_patterns"`
 	MaxDepth        int      `yaml:"max_depth" json:"max_depth" toml:"max_depth"`
 	FollowSymlinks  bool     `yaml:"follow_symlinks" json:"follow_symlinks" toml:"follow_symlinks"`
+	ExcludeBinary   bool     `yaml:"exclude_binary" json:"exclude_binary" toml:"exclude_binary"`
 }
 
 // OutputConfig 输出配置
@@ -172,6 +173,7 @@ type WalkOptions struct {
 	IncludePatterns []string
 	FollowSymlinks  bool
 	ShowHidden      bool
+	ExcludeBinary   bool
 }
 
 // FileProcessingConfig 文件处理配置

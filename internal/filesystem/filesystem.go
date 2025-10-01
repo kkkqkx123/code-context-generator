@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/constants"
 	"code-context-generator/pkg/types"
 )
@@ -59,6 +60,11 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var walkErrors []error
+	
+	// 初始化contextData的统计信息
+	contextData.Files = []types.FileInfo{}
+	contextData.Folders = []types.FolderInfo{}
+	contextData.Metadata = make(map[string]interface{})
 
 	// 遍历文件系统
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
@@ -74,7 +80,7 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 		}
 
 		depth := strings.Count(relPath, string(os.PathSeparator))
-		if depth >= options.MaxDepth {
+		if options.MaxDepth > 0 && depth >= options.MaxDepth {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -104,6 +110,8 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 
 				mu.Lock()
 				contextData.Files = append(contextData.Files, *fileInfo)
+				contextData.FileCount++
+				contextData.TotalSize += fileInfo.Size
 				mu.Unlock()
 			}(path)
 		} else {
@@ -119,6 +127,7 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 
 				mu.Lock()
 				contextData.Folders = append(contextData.Folders, *folderInfo)
+				contextData.FolderCount++
 				mu.Unlock()
 			}
 		}
@@ -150,19 +159,27 @@ func (w *FileSystemWalker) GetFileInfo(path string) (*types.FileInfo, error) {
 		return nil, fmt.Errorf("获取文件状态失败: %w", err)
 	}
 
-	// 读取文件内容
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("读取文件内容失败: %w", err)
+	// 检查是否为二进制文件
+	isBinary := !utils.IsTextFile(path)
+	
+	var content string
+	if !isBinary {
+		// 只读取文本文件的内容
+		fileContent, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("读取文件内容失败: %w", err)
+		}
+		content = string(fileContent)
 	}
 
 	return &types.FileInfo{
-		Path:    path,
-		Name:    info.Name(),
-		Size:    info.Size(),
-		ModTime: info.ModTime(),
-		IsDir:   info.IsDir(),
-		Content: string(content),
+		Path:     path,
+		Name:     info.Name(),
+		Size:     info.Size(),
+		ModTime:  info.ModTime(),
+		IsDir:    info.IsDir(),
+		Content:  content,
+		IsBinary: isBinary,
 	}, nil
 }
 
@@ -235,40 +252,43 @@ func (w *FileSystemWalker) FilterBySize(path string, maxSize int64) bool {
 
 // 辅助方法
 
+// shouldIncludeFile 检查是否应该包含文件
 func (w *FileSystemWalker) shouldIncludeFile(path string, options *types.WalkOptions) bool {
 	// 检查文件大小
 	if !w.FilterBySize(path, options.MaxFileSize) {
 		return false
 	}
 
+	// 检查是否为二进制文件（如果启用了二进制文件排除）
+	if options.ExcludeBinary && utils.IsBinaryFile(path) {
+		return false
+	}
+
 	// 检查包含模式
 	if len(options.IncludePatterns) > 0 {
-		included := false
+		matched := false
+		filename := filepath.Base(path)
 		for _, pattern := range options.IncludePatterns {
-			matched, err := filepath.Match(pattern, filepath.Base(path))
-			if err == nil && matched {
-				included = true
+			if matchedPattern, _ := filepath.Match(pattern, filename); matchedPattern {
+				matched = true
 				break
 			}
 		}
-		if !included {
+		if !matched {
 			return false
 		}
 	}
 
 	// 检查排除模式
-	for _, pattern := range options.ExcludePatterns {
-		matched, err := filepath.Match(pattern, filepath.Base(path))
-		if err == nil && matched {
-			return false
+	if len(options.ExcludePatterns) > 0 {
+		filename := filepath.Base(path)
+		for _, pattern := range options.ExcludePatterns {
+			if matchedPattern, _ := filepath.Match(pattern, filename); matchedPattern {
+				return false
+			}
 		}
 	}
-
-	// 检查隐藏文件
-	if !options.ShowHidden && strings.HasPrefix(filepath.Base(path), ".") {
-		return false
-	}
-
+	
 	return true
 }
 

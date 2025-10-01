@@ -438,6 +438,7 @@ func GetDefaultConfig() *types.Config {
 			IncludePatterns: []string{},
 			MaxDepth:        constants.DefaultMaxDepth,
 			FollowSymlinks:  false,
+			ExcludeBinary:   true, // 默认排除二进制文件
 		},
 		Output: types.OutputConfig{
 			DefaultFormat:    constants.DefaultFormat,
