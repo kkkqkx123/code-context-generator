@@ -381,8 +381,10 @@ func (m MainModel) handleResultKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "s": // 保存结果
 		// 这里应该实现保存逻辑
 		return m, nil
-	case "tab", "up", "down", "k", "j":
-		// 这些按键应该传递给结果查看器处理
+	case "q": // 退出程序
+		return m, tea.Quit
+	default:
+		// 将所有其他按键传递给结果查看器处理（包括tab、up、down等）
 		if m.resultViewer != nil {
 			newModel, cmd := m.resultViewer.Update(msg)
 			m.resultViewer = newModel.(*models.ResultViewerModel)
@@ -393,9 +395,23 @@ func (m MainModel) handleResultKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleConfigKeys 处理配置编辑器按键
-func (m MainModel) handleConfigKeys(_ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m MainModel) handleConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 配置编辑器的按键处理在ConfigEditorModel中
-	// 这里只处理ESC键，已经由handleEscKey处理
+	// 将除了全局快捷键外的所有按键传递给配置编辑器处理
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc":
+		// ESC键已经在handleEscKey中处理，这里不再处理
+		return m, nil
+	default:
+		// 将所有其他按键传递给配置编辑器处理
+		if m.configEditor != nil {
+			newModel, cmd := m.configEditor.Update(msg)
+			m.configEditor = newModel.(*models.ConfigEditorModel)
+			return m, cmd
+		}
+	}
 	return m, nil
 }
 

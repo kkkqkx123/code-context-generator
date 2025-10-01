@@ -110,6 +110,11 @@ func (m *ResultViewerModel) SetResult(result *types.WalkResult) {
 	m.result = result
 }
 
+// GetCurrentTab 获取当前标签页（用于测试）
+func (m *ResultViewerModel) GetCurrentTab() int {
+	return m.currentTab
+}
+
 // 辅助方法
 func (m *ResultViewerModel) renderOverview() string {
 	var content strings.Builder

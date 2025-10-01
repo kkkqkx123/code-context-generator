@@ -155,3 +155,8 @@ func (m *ConfigEditorModel) saveConfig() tea.Cmd {
 		return ConfigUpdateMsg{Config: m.config}
 	}
 }
+
+// GetCurrentTab 获取当前标签页（用于测试）
+func (m *ConfigEditorModel) GetCurrentTab() int {
+	return m.currentTab
+}

@@ -93,7 +93,13 @@ func (m *FileSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View 渲染视图
 func (m *FileSelectorModel) View() string {
 	if len(m.items) == 0 {
-		return "正在加载文件列表..."
+		var content strings.Builder
+		content.WriteString(TitleStyle.Render("文件选择器"))
+		content.WriteString("\n\n")
+		content.WriteString(NormalStyle.Render("正在加载文件列表..."))
+		content.WriteString("\n\n")
+		content.WriteString(HelpStyle.Render("操作: Esc返回主界面"))
+		return content.String()
 	}
 
 	var content strings.Builder
@@ -273,7 +279,7 @@ func (m *FileSelectorModel) updateViewport() {
 func (m *FileSelectorModel) loadFiles() tea.Cmd {
 	return func() tea.Msg {
 		// 创建超时上下文，防止文件系统操作卡死
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		
 		// 使用goroutine处理文件加载，支持超时
@@ -292,18 +298,24 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 				showHidden = config.FileProcessing.IncludeHidden
 			}
 			
+			fmt.Printf("调试: 开始加载路径: %s，显示隐藏文件: %v\n", m.path, showHidden)
+			
 			// 检查路径是否存在
 			if _, err := os.Stat(m.path); err != nil {
-				resultChan <- result{items: []selector.FileItem{}, err: fmt.Errorf("路径不存在: %s", m.path)}
+				fmt.Printf("错误: 路径不存在: %s，错误: %v\n", m.path, err)
+				resultChan <- result{items: []selector.FileItem{}, err: fmt.Errorf("路径不存在: %s，错误: %v", m.path, err)}
 				return
 			}
 			
 			// 获取目录内容
 			contents, err := selector.GetDirectoryContents(m.path, showHidden)
 			if err != nil {
+				fmt.Printf("错误: 获取目录内容失败: %s，错误: %v\n", m.path, err)
 				resultChan <- result{items: []selector.FileItem{}, err: err}
 				return
 			}
+			
+			fmt.Printf("调试: 获取到 %d 个原始文件项\n", len(contents))
 			
 			// 将FileInfo转换为FileItem
 			items := make([]selector.FileItem, 0, len(contents))
@@ -323,7 +335,7 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 			}
 			
 			// 调试信息：记录加载的文件数量
-			fmt.Printf("调试: 加载了 %d 个文件，显示隐藏文件: %v\n", len(items), showHidden)
+			fmt.Printf("调试: 成功加载了 %d 个文件，显示隐藏文件: %v\n", len(items), showHidden)
 			
 			resultChan <- result{items: items, err: nil}
 		}()
@@ -332,6 +344,7 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 		select {
 		case res := <-resultChan:
 			if res.err != nil {
+				fmt.Printf("错误: 文件加载失败: %v\n", res.err)
 				return FileListMsg{Items: []selector.FileItem{}}
 			}
 			
@@ -345,9 +358,11 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 				return items[i].Name < items[j].Name
 			})
 			
+			fmt.Printf("调试: 最终返回 %d 个排序后的文件项\n", len(items))
 			return FileListMsg{Items: items}
 		case <-ctx.Done():
 			// 超时，返回空列表
+			fmt.Printf("错误: 文件加载超时\n")
 			return FileListMsg{Items: []selector.FileItem{}}
 		}
 	}
