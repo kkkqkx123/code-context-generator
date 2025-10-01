@@ -1,9 +1,5 @@
 # 代码上下文生成器 - 部署文档
 
-## 概述
-
-本文档描述了代码上下文生成器在不同环境下的部署方案，包括开发环境、测试环境和生产环境的部署步骤。
-
 ## 部署方式
 
 ### 1. 源码部署
@@ -11,26 +7,7 @@
 #### 环境准备
 ```bash
 # 安装Go 1.24+
-# Windows: 下载安装包从 https://golang.org/dl/
-# Linux/macOS:
-wget https://golang.org/dl/go1.24.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.24.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
-
-# 验证安装
 go version
-```
-
-#### 获取源码
-```bash
-# 克隆仓库
-git clone https://github.com/yourusername/code-context-generator.git
-cd code-context-generator
-
-# 或者下载发布版本
-wget https://github.com/yourusername/code-context-generator/releases/download/v1.0.0/source-code.tar.gz
-tar -xzf source-code.tar.gz
-cd code-context-generator-1.0.0
 ```
 
 #### 构建应用
@@ -41,23 +18,18 @@ go mod download
 # 构建CLI版本
 go build -o code-context-generator cmd/cli/main.go
 
-# 构建TUI版本
+# 构建TUI版本  
 go build -o code-context-generator-tui cmd/tui/main.go
-
-# 构建所有版本
-make build-all  # 如果有Makefile
 ```
 
 #### 安装到系统路径
 ```bash
 # Linux/macOS
 sudo cp code-context-generator /usr/local/bin/
-sudo cp code-context-generator-tui /usr/local/bin/
 sudo chmod +x /usr/local/bin/code-context-generator*
 
-# Windows (以管理员身份运行PowerShell)
+# Windows
 copy code-context-generator.exe C:\Windows\System32\
-copy code-context-generator-tui.exe C:\Windows\System32\
 ```
 
 ### 2. 二进制部署
@@ -68,323 +40,41 @@ copy code-context-generator-tui.exe C:\Windows\System32\
 wget https://github.com/yourusername/code-context-generator/releases/download/v1.0.0/code-context-generator-linux-amd64.tar.gz
 tar -xzf code-context-generator-linux-amd64.tar.gz
 
-# macOS
-wget https://github.com/yourusername/code-context-generator/releases/download/v1.0.0/code-context-generator-darwin-amd64.tar.gz
-tar -xzf code-context-generator-darwin-amd64.tar.gz
-
-# Windows
-# 下载 code-context-generator-windows-amd64.zip 并解压
+# Windows: 下载zip并解压
+# macOS: 下载tar.gz并解压
 ```
 
-#### 安装二进制文件
+### 3. Docker部署
+
+#### 构建镜像
 ```bash
-# Linux/macOS
-sudo cp code-context-generator /usr/local/bin/
-sudo cp code-context-generator-tui /usr/local/bin/
-
-# Windows
-# 将exe文件复制到系统PATH目录，如 C:\Windows\System32\
-```
-
-### 3. 容器化部署
-
-#### Docker部署
-
-##### 创建Dockerfile
-```dockerfile
-# Build stage
-FROM golang:1.24-alpine AS builder
-
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-RUN go build -o code-context-generator cmd/cli/main.go
-RUN go build -o code-context-generator-tui cmd/tui/main.go
-
-# Runtime stage
-FROM alpine:latest
-
-RUN apk --no-cache add ca-certificates tzdata
-WORKDIR /root/
-
-COPY --from=builder /app/code-context-generator .
-COPY --from=builder /app/code-context-generator-tui .
-
-# 创建配置目录
-RUN mkdir -p /root/.config/code-context-generator
-
-# 设置时区
-ENV TZ=Asia/Shanghai
-
-# 暴露端口（如果需要Web服务）
-# EXPOSE 8080
-
-CMD ["./code-context-generator"]
-```
-
-##### 构建镜像
-```bash
-# 构建镜像
 docker build -t code-context-generator:latest .
-
-# 标记版本
-docker tag code-context-generator:latest code-context-generator:v1.0.0
 ```
 
-##### 运行容器
+#### 运行容器
 ```bash
 # 基本运行
 docker run -it --rm code-context-generator:latest --help
 
-# 挂载当前目录进行扫描
-docker run -it --rm \
-  -v $(pwd):/workspace \
-  -w /workspace \
-  code-context-generator:latest generate . -f json
-
-# 挂载配置文件
-docker run -it --rm \
-  -v $(pwd):/workspace \
-  -v ~/.config/code-context-generator:/root/.config/code-context-generator \
-  -w /workspace \
-  code-context-generator:latest generate . --config /root/.config/code-context-generator/config.toml
-
-# 运行TUI版本（需要TTY）
-docker run -it --rm \
-  --device=/dev/tty \
-  -v $(pwd):/workspace \
-  -w /workspace \
-  code-context-generator-tui:latest
+# 挂载目录扫描
+docker run -it --rm -v $(pwd):/workspace -w /workspace code-context-generator:latest generate .
 ```
 
-#### Docker Compose部署
+## 验证部署
 
-##### docker-compose.yml
-```yaml
-version: '3.8'
-
-services:
-  code-context-generator:
-    image: code-context-generator:latest
-    container_name: code-context-generator
-    volumes:
-      - ./workspace:/workspace
-      - ./config:/root/.config/code-context-generator
-    working_dir: /workspace
-    environment:
-      - TZ=Asia/Shanghai
-      - CODE_CONTEXT_FORMAT=json
-      - CODE_CONTEXT_MAX_DEPTH=3
-    stdin_open: true
-    tty: true
-    command: ["./code-context-generator"]
-    
-  code-context-generator-tui:
-    image: code-context-generator-tui:latest
-    container_name: code-context-generator-tui
-    volumes:
-      - ./workspace:/workspace
-      - ./config:/root/.config/code-context-generator
-    working_dir: /workspace
-    environment:
-      - TZ=Asia/Shanghai
-    stdin_open: true
-    tty: true
-    command: ["./code-context-generator-tui"]
-```
-
-##### 启动服务
 ```bash
-# 启动服务
-docker-compose up -d
+# 检查版本
+./code-context-generator --version
+
+# 测试基本功能
+./code-context-generator generate --help
+```docker-compose up -d
 
 # 查看日志
 docker-compose logs -f code-context-generator
 
 # 停止服务
 docker-compose down
-```
-
-### 4. 系统服务部署
-
-#### Linux Systemd服务
-
-##### 创建服务文件
-```ini
-# /etc/systemd/system/code-context-generator.service
-[Unit]
-Description=Code Context Generator Service
-After=network.target
-
-[Service]
-Type=simple
-User=code-context
-Group=code-context
-WorkingDirectory=/opt/code-context-generator
-ExecStart=/usr/local/bin/code-context-generator generate /var/projects --config /etc/code-context-generator/config.toml
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-# 环境变量
-Environment=CODE_CONTEXT_FORMAT=json
-Environment=CODE_CONTEXT_MAX_DEPTH=5
-
-# 资源限制
-LimitNOFILE=65536
-MemoryLimit=1G
-CPUQuota=50%
-
-[Install]
-WantedBy=multi-user.target
-```
-
-##### 创建系统用户
-```bash
-# 创建专用用户
-sudo useradd -r -s /bin/false -d /opt/code-context-generator code-context
-
-# 创建目录
-sudo mkdir -p /opt/code-context-generator
-sudo mkdir -p /etc/code-context-generator
-sudo mkdir -p /var/log/code-context-generator
-
-# 设置权限
-sudo chown -R code-context:code-context /opt/code-context-generator
-sudo chown -R code-context:code-context /var/log/code-context-generator
-```
-
-##### 安装应用
-```bash
-# 复制二进制文件
-sudo cp code-context-generator /usr/local/bin/
-sudo cp code-context-generator-tui /usr/local/bin/
-
-# 复制配置文件
-sudo cp config.toml /etc/code-context-generator/
-sudo chown code-context:code-context /etc/code-context-generator/config.toml
-sudo chmod 644 /etc/code-context-generator/config.toml
-```
-
-##### 启动服务
-```bash
-# 重新加载systemd
-sudo systemctl daemon-reload
-
-# 启用服务
-sudo systemctl enable code-context-generator
-
-# 启动服务
-sudo systemctl start code-context-generator
-
-# 查看状态
-sudo systemctl status code-context-generator
-
-# 查看日志
-sudo journalctl -u code-context-generator -f
-```
-
-#### Windows服务部署
-
-##### 使用NSSM创建服务
-```powershell
-# 下载NSSM
-# https://nssm.cc/download
-
-# 安装服务
-nssm install CodeContextGenerator
-
-# 配置服务
-nssm set CodeContextGenerator Application "C:\Program Files\CodeContextGenerator\code-context-generator.exe"
-nssm set CodeContextGenerator AppParameters "generate C:\Projects --config C:\ProgramData\CodeContextGenerator\config.toml"
-nssm set CodeContextGenerator DisplayName "Code Context Generator"
-nssm set CodeContextGenerator Description "Code Context Generator Service"
-nssm set CodeContextGenerator Start SERVICE_AUTO_START
-
-# 启动服务
-net start CodeContextGenerator
-```
-
-### 5. Kubernetes部署
-
-#### 创建ConfigMap
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: code-context-generator-config
-data:
-  config.toml: |
-    [output]
-    format = "json"
-    encoding = "utf-8"
-    
-    [file_processing]
-    include_hidden = false
-    max_file_size = 10485760
-    max_depth = 5
-    exclude_patterns = ["*.tmp", "*.log", ".git"]
-```
-
-#### 创建Deployment
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: code-context-generator
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: code-context-generator
-  template:
-    metadata:
-      labels:
-        app: code-context-generator
-    spec:
-      containers:
-      - name: code-context-generator
-        image: code-context-generator:latest
-        command: ["./code-context-generator"]
-        args: ["generate", "/workspace", "--config", "/config/config.toml"]
-        volumeMounts:
-        - name: config
-          mountPath: /config
-        - name: workspace
-          mountPath: /workspace
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
-      volumes:
-      - name: config
-        configMap:
-          name: code-context-generator-config
-      - name: workspace
-        persistentVolumeClaim:
-          claimName: workspace-pvc
-```
-
-#### 创建Service（如果需要暴露服务）
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: code-context-generator-service
-spec:
-  selector:
-    app: code-context-generator
-  ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 8080
-  type: ClusterIP
 ```
 
 ## 环境配置
@@ -624,98 +314,6 @@ max_workers = 8  # 根据CPU核心数调整
 buffer_size = 8192  # 增大缓冲区
 batch_size = 100  # 批处理大小
 cache_size = 500  # 增大缓存
-```
-
-## 故障排除
-
-### 常见问题
-
-#### 服务启动失败
-```bash
-# 检查日志
-journalctl -u code-context-generator -n 50
-
-# 检查配置文件
-./code-context-generator config validate --config /etc/code-context-generator/config.toml
-
-# 检查权限
-ls -la /usr/local/bin/code-context-generator
-ls -la /etc/code-context-generator/
-```
-
-#### 性能问题
-```bash
-# 监控系统资源
-top -p $(pgrep code-context-generator)
-iostat -x 1
-vmstat 1
-
-# 检查内存使用
-pmap -x $(pgrep code-context-generator)
-
-# 检查文件描述符
-lsof -p $(pgrep code-context-generator)
-```
-
-#### 容器问题
-```bash
-# 查看容器日志
-docker logs code-context-generator
-
-# 进入容器调试
-docker exec -it code-context-generator /bin/sh
-
-# 检查容器资源使用
-docker stats code-context-generator
-```
-
-### 恢复程序
-
-#### 服务恢复
-```bash
-# 重启服务
-sudo systemctl restart code-context-generator
-
-# 重新加载配置
-sudo systemctl reload code-context-generator
-
-# 查看服务状态
-sudo systemctl status code-context-generator
-```
-
-#### 数据恢复
-```bash
-# 从备份恢复配置
-cp /backup/code-context-generator-config-20240101.toml /etc/code-context-generator/config.toml
-
-# 恢复权限
-sudo chown code-context:code-context /etc/code-context-generator/config.toml
-sudo chmod 644 /etc/code-context-generator/config.toml
-
-# 重启服务
-sudo systemctl restart code-context-generator
-```
-
-## 更新和升级
-
-### 应用更新
-```bash
-# 备份当前配置
-cp /etc/code-context-generator/config.toml /etc/code-context-generator/config.toml.bak
-
-# 停止服务
-sudo systemctl stop code-context-generator
-
-# 更新应用
-wget https://github.com/yourusername/code-context-generator/releases/download/v1.1.0/code-context-generator-linux-amd64.tar.gz
-tar -xzf code-context-generator-linux-amd64.tar.gz
-sudo cp code-context-generator /usr/local/bin/
-
-# 重启服务
-sudo systemctl start code-context-generator
-
-# 验证更新
-./code-context-generator --version
 ```
 
 ### 配置迁移

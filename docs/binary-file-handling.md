@@ -8,59 +8,93 @@
 
 ### 检测方法
 
-项目使用基于文件扩展名的检测方法，通过`internal/utils/utils.go`中的工具函数实现：
+项目使用智能的二进制文件检测方法，结合文件扩展名和内容分析，通过`internal/utils/utils.go`中的工具函数实现：
 
 ```go
-// IsTextFile 判断文件是否为文本文件
-func IsTextFile(filename string) bool {
-    ext := strings.ToLower(filepath.Ext(filename))
-    
-    // 预定义的文本文件扩展名列表
-    textExts := map[string]bool{
-        ".txt": true, ".md": true, ".go": true, ".py": true, ".js": true,
-        ".html": true, ".css": true, ".json": true, ".xml": true, ".yaml": true,
-        ".yml": true, ".toml": true, ".ini": true, ".cfg": true, ".conf": true,
-        ".sh": true, ".bat": true, ".cmd": true, ".ps1": true, ".bash": true,
-        ".zsh": true, ".fish": true, ".c": true, ".cpp": true, ".h": true,
-        ".hpp": true, ".java": true, ".cs": true, ".php": true, ".rb": true,
-        ".rs": true, ".swift": true, ".kt": true, ".scala": true, ".r": true,
-        ".m": true, ".mm": true, ".pl": true, ".lua": true, ".vim": true,
-        ".el": true, ".lisp": true, ".sql": true, ".vimrc": true, ".gitignore": true,
-        ".dockerignore": true, ".editorconfig": true, ".env": true, ".properties": true,
-        ".gradle": true, ".cmake": true, ".make": true, ".mk": true, ".dockerfile": true,
-        ".jenkinsfile": true, ".travis.yml": true, ".gitlab-ci.yml": true, ".github": true,
+// IsTextFile 检查是否为文本文件
+func IsTextFile(path string) bool {
+    // 首先检查文件扩展名
+    ext := strings.ToLower(filepath.Ext(path))
+    textExtensions := []string{
+        ".txt", ".md", ".json", ".xml", ".yaml", ".yml", ".toml",
+        ".go", ".py", ".js", ".ts", ".java", ".cpp", ".c", ".h",
+        ".html", ".css", ".scss", ".sass", ".sql", ".sh", ".bat",
+        ".ps1", ".rb", ".php", ".rs", ".swift", ".kt", ".scala",
     }
-    
-    // 检查文件扩展名是否在文本文件列表中
-    if isText, exists := textExts[ext]; exists && isText {
-        return true
+
+    for _, textExt := range textExtensions {
+        if ext == textExt {
+            return true
+        }
     }
-    
-    // 没有扩展名的文件默认为文本文件
+
+    // 如果没有扩展名，尝试读取文件内容来判断
     if ext == "" {
-        return true
+        file, err := os.Open(path)
+        if err != nil {
+            return false // 无法打开文件，假设为二进制文件
+        }
+        defer file.Close()
+
+        // 读取前512字节来判断是否为文本文件
+        buffer := make([]byte, 512)
+        n, err := file.Read(buffer)
+        if err != nil && err != io.EOF {
+            return false // 读取错误，假设为二进制文件
+        }
+
+        // 检查是否包含null字节（二进制文件的标志）
+        for i := 0; i < n; i++ {
+            if buffer[i] == 0 {
+                return false // 包含null字节，是二进制文件
+            }
+        }
+
+        // 检查是否包含可打印字符
+        printableCount := 0
+        for i := 0; i < n; i++ {
+            b := buffer[i]
+            if b >= 32 && b <= 126 { // 可打印ASCII字符
+                printableCount++
+            } else if b == 9 || b == 10 || b == 13 { // tab, newline, carriage return
+                printableCount++
+            }
+        }
+
+        // 如果大部分字符都是可打印的，认为是文本文件
+        if n > 0 && float64(printableCount)/float64(n) > 0.8 {
+            return true
+        }
     }
-    
+
     return false
 }
 
-// IsBinaryFile 判断文件是否为二进制文件
-func IsBinaryFile(filename string) bool {
-    return !IsTextFile(filename)
+// IsBinaryFile 检查是否为二进制文件
+func IsBinaryFile(path string) bool {
+    return !IsTextFile(path)
 }
 ```
 
 ### 支持的文本文件类型
 
-系统支持超过50种常见的文本文件扩展名，包括：
+系统支持多种常见的文本文件扩展名，包括：
 
-- **编程语言**: `.go`, `.py`, `.js`, `.java`, `.c`, `.cpp`, `.cs`, `.php`, `.rb`, `.rs`等
-- **标记语言**: `.html`, `.xml`, `.json`, `.yaml`, `.toml`, `.md`等
-- **配置文件**: `.ini`, `.cfg`, `.conf`, `.properties`, `.env`等
-- **脚本文件**: `.sh`, `.bat`, `.cmd`, `.ps1`, `.bash`等
-- **构建文件**: `.gradle`, `.cmake`, `.make`, `.mk`, `dockerfile`等
-- **版本控制**: `.gitignore`, `.dockerignore`, `.editorconfig`等
-- **CI/CD配置**: `.travis.yml`, `.gitlab-ci.yml`, `.jenkinsfile`等
+- **编程语言**: `.go`, `.py`, `.js`, `.ts`, `.java`, `.cpp`, `.c`, `.rb`, `.php`, `.rs`, `.swift`, `.kt`, `.scala`
+- **标记语言**: `.html`, `.xml`, `.json`, `.yaml`, `.yml`, `.toml`, `.md`
+- **样式文件**: `.css`, `.scss`, `.sass`
+- **脚本文件**: `.sh`, `.bat`, `.ps1`, `.sql`
+
+### 无扩展名文件处理
+
+对于没有扩展名的文件，系统采用智能内容分析算法：
+
+1. **内容采样**: 读取文件前512字节进行内容分析
+2. **二进制检测**: 检查是否包含null字节（二进制文件的标志）
+3. **字符分析**: 统计可打印字符比例（ASCII 32-126）和常见控制字符（tab、换行、回车）
+4. **智能判断**: 如果超过80%的字符为可打印字符，则判定为文本文件
+
+这种智能检测机制确保无扩展名的文本文件（如README、LICENSE、Makefile等）能够被正确识别和处理。
 
 ## 文件处理流程
 
