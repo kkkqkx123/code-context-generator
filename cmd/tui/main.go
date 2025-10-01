@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"code-context-generator/internal/filesystem"
 	"code-context-generator/pkg/types"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -432,17 +433,39 @@ func (m Model) startProcessing() (tea.Model, tea.Cmd) {
 // processFiles 处理文件
 func (m Model) processFiles() tea.Cmd {
 	return func() tea.Msg {
-		// 创建遍历结果
-		result := &types.WalkResult{
-			Files:       []types.FileInfo{},
-			Folders:     []types.FolderInfo{},
-			FileCount:   0,
-			FolderCount: 0,
-			TotalSize:   0,
+		// 创建文件系统遍历器
+		walker := filesystem.NewWalker()
+		
+		// 设置遍历选项
+		options := &types.WalkOptions{
+			MaxDepth:        m.options.MaxDepth,
+			MaxFileSize:     m.options.MaxFileSize,
+			ExcludePatterns: m.options.ExcludePatterns,
+			IncludePatterns: m.options.IncludePatterns,
+			FollowSymlinks:  m.options.FollowSymlinks,
+			ShowHidden:      m.options.ShowHidden,
 		}
-
-		// 这里应该调用实际的文件遍历逻辑
-		// 暂时返回空结果
+		
+		// 执行文件遍历
+		contextData, err := walker.Walk(m.pathInput, options)
+		if err != nil {
+			return ErrorMsg{Err: fmt.Errorf("文件遍历失败: %w", err)}
+		}
+		
+		// 转换为WalkResult格式
+		result := &types.WalkResult{
+			Files:       contextData.Files,
+			Folders:     contextData.Folders,
+			FileCount:   len(contextData.Files),
+			FolderCount: len(contextData.Folders),
+			TotalSize:   0, // 将在下面计算
+		}
+		
+		// 计算总大小
+		for _, file := range contextData.Files {
+			result.TotalSize += file.Size
+		}
+		
 		return ResultMsg{Result: result}
 	}
 }

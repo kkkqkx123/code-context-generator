@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"code-context-generator/internal/selector"
@@ -37,15 +38,15 @@ type ConfigUpdateMsg struct {
 
 // FileSelectorModel 文件选择器模型
 type FileSelectorModel struct {
-	path          string
-	items         []selector.FileItem
-	selected      map[int]bool
-	cursor        int
-	scrollOffset  int
-	multiSelect   bool
-	filter        string
-	height        int
-	width         int
+	path         string
+	items        []selector.FileItem
+	selected     map[int]bool
+	cursor       int
+	scrollOffset int
+	multiSelect  bool
+	filter       string
+	height       int
+	width        int
 }
 
 // NewFileSelectorModel 创建文件选择器模型
@@ -119,31 +120,31 @@ func (m *FileSelectorModel) View() string {
 	}
 
 	var content strings.Builder
-	
+
 	// 标题
 	content.WriteString(titleStyle.Render("文件选择器"))
 	content.WriteString("\n\n")
-	
+
 	// 路径
 	content.WriteString(normalStyle.Render(fmt.Sprintf("路径: %s", m.path)))
 	content.WriteString("\n\n")
-	
+
 	// 文件列表
 	visibleItems := m.getVisibleItems()
 	for i, item := range visibleItems {
 		actualIndex := m.scrollOffset + i
 		isSelected := m.selected[actualIndex]
 		isCursor := actualIndex == m.cursor
-		
+
 		line := m.renderFileItem(item, isSelected, isCursor)
 		content.WriteString(line)
 		content.WriteString("\n")
 	}
-	
+
 	// 帮助信息
 	content.WriteString("\n")
 	content.WriteString(helpStyle.Render("操作: ↑↓移动, 空格选择, Enter确认, Esc取消, a全选, n取消全选, i反选"))
-	
+
 	return content.String()
 }
 
@@ -201,30 +202,84 @@ func (m *FileSelectorModel) getVisibleItems() []selector.FileItem {
 	return m.items[start:end]
 }
 
+// getFileIcon 根据文件扩展名返回对应的图标
+func getFileIcon(filename string, isDir bool) string {
+	if isDir {
+		return "📂" // 目录使用打开的文件夹图标
+	}
+	
+	// 获取文件扩展名
+	ext := strings.ToLower(strings.TrimPrefix(filename, "."))
+	if dotIndex := strings.LastIndex(filename, "."); dotIndex != -1 && dotIndex < len(filename)-1 {
+		ext = strings.ToLower(filename[dotIndex+1:])
+	}
+	
+	// 文档类文件使用📝图标
+	switch ext {
+	case "md", "txt", "csv", "doc", "docx", "pdf", "rtf":
+		return "📝"
+	// 配置文件使用⚙️图标
+	case "json", "xml", "toml", "yaml", "yml", "ini", "conf", "config", "properties":
+		return "⚙️"
+	// 代码文件使用💻图标
+	case "go", "py", "js", "ts", "java", "cpp", "c", "h", "cs", "php", "rb", "swift", "kt", "rs":
+		return "💻"
+	// 样式文件使用🎨图标
+	case "css", "scss", "sass", "less", "html", "htm":
+		return "🎨"
+	// 脚本文件使用📜图标
+	case "sh", "bat", "cmd", "ps1", "bash", "zsh":
+		return "📜"
+	// 压缩文件使用📦图标
+	case "zip", "rar", "7z", "tar", "gz", "bz2":
+		return "📦"
+	// 图片文件使用🖼️图标
+	case "jpg", "jpeg", "png", "gif", "bmp", "svg", "ico":
+		return "🖼️"
+	// 音频文件使用🎵图标
+	case "mp3", "wav", "flac", "aac", "ogg":
+		return "🎵"
+	// 视频文件使用🎬图标
+	case "mp4", "avi", "mkv", "mov", "wmv", "flv":
+		return "🎬"
+	// 数据库文件使用🗄️图标
+	case "db", "sqlite", "mdb", "accdb":
+		return "🗄️"
+	// 日志文件使用📋图标
+	case "log":
+		return "📋"
+	// 默认文件图标
+	default:
+		return "📄"
+	}
+}
+
 func (m *FileSelectorModel) renderFileItem(item selector.FileItem, isSelected, isCursor bool) string {
 	var style lipgloss.Style
-	
+
 	if isCursor {
 		style = selectedStyle
+	} else if item.IsDir {
+		// 目录使用特殊的样式
+		style = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00BFFF")). // 深蓝色
+			Bold(true)
 	} else {
 		style = normalStyle
 	}
-	
+
 	prefix := "  "
 	if isSelected {
 		prefix = "✓ "
 	}
-	
-	icon := "📄"
-	if item.IsDir {
-		icon = "📁"
-	}
-	
+
+	icon := getFileIcon(item.Name, item.IsDir)
+
 	name := item.Name
 	if item.IsDir {
 		name += "/"
 	}
-	
+
 	line := fmt.Sprintf("%s%s %s", prefix, icon, name)
 	return style.Render(line)
 }
@@ -235,9 +290,40 @@ func (m *FileSelectorModel) updateViewport() {
 
 func (m *FileSelectorModel) loadFiles() tea.Cmd {
 	return func() tea.Msg {
-		// 这里应该实际加载文件列表
-		// 为了简化，返回空列表
-		return FileListMsg{Items: []selector.FileItem{}}
+		// 获取目录内容
+		contents, err := selector.GetDirectoryContents(m.path, cfg.FileProcessing.IncludeHidden)
+		if err != nil {
+			// 如果出错，返回空列表
+			return FileListMsg{Items: []selector.FileItem{}}
+		}
+
+		// 将FileInfo转换为FileItem
+		items := make([]selector.FileItem, 0, len(contents))
+		for _, info := range contents {
+			item := selector.FileItem{
+				Path:     info.Path,
+				Name:     info.Name,
+				Size:     info.Size,
+				ModTime:  info.ModTime,
+				IsDir:    info.IsDir,
+				IsHidden: info.IsHidden,
+				Icon:     info.Icon,
+				Type:     info.Type,
+				Selected: false,
+			}
+			items = append(items, item)
+		}
+
+		// 按名称排序
+		sort.Slice(items, func(i, j int) bool {
+			// 目录优先，然后按名称排序
+			if items[i].IsDir != items[j].IsDir {
+				return items[i].IsDir
+			}
+			return items[i].Name < items[j].Name
+		})
+
+		return FileListMsg{Items: items}
 	}
 }
 
@@ -295,28 +381,28 @@ func (m *ProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View 渲染视图
 func (m *ProgressModel) View() string {
 	var content strings.Builder
-	
+
 	content.WriteString(titleStyle.Render("处理中..."))
 	content.WriteString("\n\n")
-	
+
 	// 进度条
 	barWidth := m.width - 4
 	if barWidth > 0 {
 		filled := int(float64(barWidth) * m.progress)
 		empty := barWidth - filled
-		
+
 		bar := strings.Repeat("█", filled) + strings.Repeat("░", empty)
 		content.WriteString(normalStyle.Render(fmt.Sprintf("[%s] %.1f%%", bar, m.progress*100)))
 		content.WriteString("\n\n")
 	}
-	
+
 	// 状态信息
 	content.WriteString(normalStyle.Render(m.status))
 	content.WriteString("\n\n")
-	
+
 	// 帮助信息
 	content.WriteString(helpStyle.Render("操作: Ctrl+C 取消"))
-	
+
 	return content.String()
 }
 
@@ -393,11 +479,11 @@ func (m *ResultViewerModel) View() string {
 	}
 
 	var content strings.Builder
-	
+
 	// 标题
 	content.WriteString(titleStyle.Render("扫描结果"))
 	content.WriteString("\n\n")
-	
+
 	// 标签页
 	tabs := []string{"概览", "文件", "目录"}
 	for i, tab := range tabs {
@@ -409,7 +495,7 @@ func (m *ResultViewerModel) View() string {
 		content.WriteString(" ")
 	}
 	content.WriteString("\n\n")
-	
+
 	// 内容
 	switch m.currentTab {
 	case 0: // 概览
@@ -419,11 +505,11 @@ func (m *ResultViewerModel) View() string {
 	case 2: // 目录
 		content.WriteString(m.renderDirectories())
 	}
-	
+
 	// 帮助信息
 	content.WriteString("\n")
 	content.WriteString(helpStyle.Render("操作: Tab切换标签, ↑↓滚动, b返回主界面, s保存, ESC返回主界面"))
-	
+
 	return content.String()
 }
 
@@ -432,50 +518,65 @@ func (m *ResultViewerModel) SetResult(result *types.WalkResult) {
 	m.result = result
 }
 
+// formatFileSize 格式化文件大小显示
+func formatFileSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
 // 辅助方法
 func (m *ResultViewerModel) renderOverview() string {
 	var content strings.Builder
-	
+
 	content.WriteString(normalStyle.Render(fmt.Sprintf("根路径: %s\n", m.result.RootPath)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("文件数量: %d\n", m.result.FileCount)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("目录数量: %d\n", m.result.FolderCount)))
-	content.WriteString(normalStyle.Render(fmt.Sprintf("总大小: %d 字节\n", m.result.TotalSize)))
+	content.WriteString(normalStyle.Render(fmt.Sprintf("总大小: %s\n", formatFileSize(m.result.TotalSize))))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("扫描时间: %v\n", m.result.ScanDuration)))
-	
+
 	return content.String()
 }
 
 func (m *ResultViewerModel) renderFiles() string {
 	var content strings.Builder
-	
+
 	start := m.scrollOffset
 	end := start + m.height - 10
 	if end > len(m.result.Files) {
 		end = len(m.result.Files)
 	}
-	
+
 	for i := start; i < end; i++ {
 		file := m.result.Files[i]
-		content.WriteString(normalStyle.Render(fmt.Sprintf("%s (%d bytes)\n", file.Name, file.Size)))
+		icon := getFileIcon(file.Name, false) // 文件不是目录
+		content.WriteString(normalStyle.Render(fmt.Sprintf("%s %s (%s)\n", icon, file.Name, formatFileSize(file.Size))))
 	}
-	
+
 	return content.String()
 }
 
 func (m *ResultViewerModel) renderDirectories() string {
 	var content strings.Builder
-	
+
 	start := m.scrollOffset
 	end := start + m.height - 10
 	if end > len(m.result.Folders) {
 		end = len(m.result.Folders)
 	}
-	
+
 	for i := start; i < end; i++ {
 		folder := m.result.Folders[i]
-		content.WriteString(normalStyle.Render(fmt.Sprintf("%s/\n", folder.Name)))
+		content.WriteString(normalStyle.Render(fmt.Sprintf("📂 %s/\n", folder.Name)))
 	}
-	
+
 	return content.String()
 }
 
@@ -545,11 +646,11 @@ func (m *ConfigEditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View 渲染视图
 func (m *ConfigEditorModel) View() string {
 	var content strings.Builder
-	
+
 	// 标题
 	content.WriteString(titleStyle.Render("配置编辑器"))
 	content.WriteString("\n\n")
-	
+
 	// 标签页
 	tabs := []string{"输出", "文件处理", "UI", "性能"}
 	for i, tab := range tabs {
@@ -561,7 +662,7 @@ func (m *ConfigEditorModel) View() string {
 		content.WriteString(" ")
 	}
 	content.WriteString("\n\n")
-	
+
 	// 内容
 	switch m.currentTab {
 	case 0: // 输出
@@ -573,59 +674,59 @@ func (m *ConfigEditorModel) View() string {
 	case 3: // 性能
 		content.WriteString(m.renderPerformanceConfig())
 	}
-	
+
 	// 帮助信息
 	content.WriteString("\n")
 	content.WriteString(helpStyle.Render("操作: Tab切换标签, ↑↓选择, Enter编辑, s保存, ESC返回主界面"))
-	
+
 	return content.String()
 }
 
 // 辅助方法
 func (m *ConfigEditorModel) renderOutputConfig() string {
 	var content strings.Builder
-	
+
 	content.WriteString(normalStyle.Render(fmt.Sprintf("格式: %s\n", m.config.Output.Format)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("编码: %s\n", m.config.Output.Encoding)))
 	if m.config.Output.FilePath != "" {
 		content.WriteString(normalStyle.Render(fmt.Sprintf("输出文件: %s\n", m.config.Output.FilePath)))
 	}
-	
+
 	return content.String()
 }
 
 func (m *ConfigEditorModel) renderFileProcessingConfig() string {
 	var content strings.Builder
-	
+
 	content.WriteString(normalStyle.Render(fmt.Sprintf("包含隐藏文件: %v\n", m.config.FileProcessing.IncludeHidden)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("最大文件大小: %d\n", m.config.FileProcessing.MaxFileSize)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("最大深度: %d\n", m.config.FileProcessing.MaxDepth)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("包含内容: %v\n", m.config.FileProcessing.IncludeContent)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("包含哈希: %v\n", m.config.FileProcessing.IncludeHash)))
-	
+
 	return content.String()
 }
 
 func (m *ConfigEditorModel) renderUIConfig() string {
 	var content strings.Builder
-	
+
 	content.WriteString(normalStyle.Render(fmt.Sprintf("主题: %s\n", m.config.UI.Theme)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("显示进度: %v\n", m.config.UI.ShowProgress)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("显示大小: %v\n", m.config.UI.ShowSize)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("显示日期: %v\n", m.config.UI.ShowDate)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("显示预览: %v\n", m.config.UI.ShowPreview)))
-	
+
 	return content.String()
 }
 
 func (m *ConfigEditorModel) renderPerformanceConfig() string {
 	var content strings.Builder
-	
+
 	content.WriteString(normalStyle.Render(fmt.Sprintf("最大工作线程: %d\n", m.config.Performance.MaxWorkers)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("缓冲区大小: %d\n", m.config.Performance.BufferSize)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("缓存启用: %v\n", m.config.Performance.CacheEnabled)))
 	content.WriteString(normalStyle.Render(fmt.Sprintf("缓存大小: %d\n", m.config.Performance.CacheSize)))
-	
+
 	return content.String()
 }
 
