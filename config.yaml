@@ -1,17 +1,19 @@
 formats:
   xml:
     enabled: true
-    structure:
-      file: file
-      files: files
-      folder: folder
-      root: context
+    root_tag: context
+    file_tag: file
+    folder_tag: folder
+    files_tag: files
     fields:
       content: content
       filename: filename
       path: path
     template: ""
-    formatting: {}
+    formatting:
+      indent: "  "
+      declaration: true
+      encoding: UTF-8
   json:
     enabled: true
     structure:

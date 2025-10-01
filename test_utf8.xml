@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<context>
+  <files>
+    <file>
+      <Name>test_utf8.txt</Name>
+      <Path>test_utf8.txt</Path>
+      <Content>﻿test output&#xD;&#xA;</Content>
+      <Size>16</Size>
+      <ModTime>2025-10-01T20:25:10.3383737+08:00</ModTime>
+      <IsDir>false</IsDir>
+      <IsHidden>false</IsHidden>
+      <IsBinary>false</IsBinary>
+    </file>
+  </files>
+  <folders></folders>
+  <file_count>1</file_count>
+  <folder_count>0</folder_count>
+  <total_size>16</total_size>
+</context>

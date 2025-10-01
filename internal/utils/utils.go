@@ -427,8 +427,151 @@ func SafePathJoin(base, elem string) (string, error) {
 	return joined, nil
 }
 
-// ReadFileContent 读取文件内容（带大小限制）
-func ReadFileContent(path string, maxSize int64) (string, bool, error) {
+// EncodingUtils 编码工具函数
+
+// DetectEncoding 检测文件编码
+func DetectEncoding(data []byte) (string, []byte) {
+	if len(data) == 0 {
+		return "utf-8", data
+	}
+
+	// 检查BOM头
+	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
+		return "utf-8", data[3:] // 跳过BOM
+	}
+	
+	if len(data) >= 2 {
+		// UTF-16 LE BOM
+		if data[0] == 0xFF && data[1] == 0xFE {
+			return "utf-16le", data[2:]
+		}
+		// UTF-16 BE BOM
+		if data[0] == 0xFE && data[1] == 0xFF {
+			return "utf-16be", data[2:]
+		}
+	}
+
+	// 检查是否为UTF-8
+	if isValidUTF8(data) {
+		return "utf-8", data
+	}
+
+	// 检查是否为UTF-16
+	if isValidUTF16(data) {
+		return "utf-16le", data // 默认小端
+	}
+
+	// 默认按UTF-8处理
+	return "utf-8", data
+}
+
+// isValidUTF8 检查数据是否为有效的UTF-8编码
+func isValidUTF8(data []byte) bool {
+	for i := 0; i < len(data); {
+		r := rune(data[i])
+		if r < 0x80 {
+			i++
+			continue
+		}
+
+		// 多字节UTF-8序列
+		if i+1 >= len(data) {
+			return false
+		}
+
+		if r < 0xE0 {
+			// 2字节序列: 110xxxxx 10xxxxxx
+			if data[i+1]&0xC0 != 0x80 {
+				return false
+			}
+			i += 2
+		} else if r < 0xF0 {
+			// 3字节序列: 1110xxxx 10xxxxxx 10xxxxxx
+			if i+2 >= len(data) || data[i+1]&0xC0 != 0x80 || data[i+2]&0xC0 != 0x80 {
+				return false
+			}
+			i += 3
+		} else if r < 0xF8 {
+			// 4字节序列: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+			if i+3 >= len(data) || data[i+1]&0xC0 != 0x80 || data[i+2]&0xC0 != 0x80 || data[i+3]&0xC0 != 0x80 {
+				return false
+			}
+			i += 4
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+// isValidUTF16 检查数据是否为有效的UTF-16编码
+func isValidUTF16(data []byte) bool {
+	if len(data)%2 != 0 {
+		return false
+	}
+
+	// 简单检查：查看是否有大量0字节
+	zeroCount := 0
+	for _, b := range data {
+		if b == 0 {
+			zeroCount++
+		}
+	}
+
+	// 如果超过25%的字符是0，可能是UTF-16
+	return float64(zeroCount)/float64(len(data)) > 0.25
+}
+
+// ConvertToUTF8 将数据转换为UTF-8编码
+func ConvertToUTF8(data []byte, encoding string) (string, error) {
+	switch strings.ToLower(encoding) {
+	case "utf-8":
+		return string(data), nil
+	case "utf-16le":
+		return utf16ToUTF8(data, true), nil
+	case "utf-16be":
+		return utf16ToUTF8(data, false), nil
+	default:
+		return string(data), nil // 默认按UTF-8处理
+	}
+}
+
+// utf16ToUTF8 将UTF-16转换为UTF-8
+func utf16ToUTF8(data []byte, littleEndian bool) string {
+	if len(data)%2 != 0 {
+		return string(data) // 如果不是偶数长度，直接返回
+	}
+
+	var result strings.Builder
+	for i := 0; i < len(data); i += 2 {
+		var r rune
+		if littleEndian {
+			r = rune(data[i]) | rune(data[i+1])<<8
+		} else {
+			r = rune(data[i])<<8 | rune(data[i+1])
+		}
+
+		if r == 0 {
+			break // 遇到null字符停止
+		}
+
+		if r < 0x80 {
+			result.WriteByte(byte(r))
+		} else if r < 0x800 {
+			result.WriteByte(0xC0 | byte(r>>6))
+			result.WriteByte(0x80 | byte(r&0x3F))
+		} else {
+			result.WriteByte(0xE0 | byte(r>>12))
+			result.WriteByte(0x80 | byte((r>>6)&0x3F))
+			result.WriteByte(0x80 | byte(r&0x3F))
+		}
+	}
+
+	return result.String()
+}
+
+// ReadFileContentWithEncoding 智能编码读取文件内容
+func ReadFileContentWithEncoding(path string, maxSize int64) (string, bool, error) {
 	// 获取文件信息
 	info, err := os.Stat(path)
 	if err != nil {
@@ -448,8 +591,18 @@ func ReadFileContent(path string, maxSize int64) (string, bool, error) {
 
 	// 检测是否为二进制文件
 	isBinary := !IsTextFile(path)
+	if isBinary {
+		return "[二进制文件]", isBinary, nil
+	}
 
-	return string(content), isBinary, nil
+	// 检测编码并转换
+	encoding, cleanData := DetectEncoding(content)
+	utf8Content, err := ConvertToUTF8(cleanData, encoding)
+	if err != nil {
+		return "", false, fmt.Errorf("编码转换失败: %w", err)
+	}
+
+	return utf8Content, isBinary, nil
 }
 
 // ColorUtils 颜色工具函数
@@ -491,4 +644,10 @@ func WarningColor(text string) string {
 // InfoColor 信息颜色
 func InfoColor(text string) string {
 	return Colorize(text, ColorBlue)
+}
+
+// ReadFileContent 读取文件内容（带大小限制）
+func ReadFileContent(path string, maxSize int64) (string, bool, error) {
+	// 使用新的编码感知函数
+	return ReadFileContentWithEncoding(path, maxSize)
 }

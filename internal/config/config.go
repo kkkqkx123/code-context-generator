@@ -3,7 +3,6 @@ package config
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -329,12 +328,141 @@ func (cm *ConfigManager) saveTOML(configPath string) error {
 }
 
 func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
-	// 实现XML生成逻辑
-	output, err := xml.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("XML生成失败: %w", err)
+	// 获取XML配置
+	xmlConfig := cm.config.Formats.XML
+	
+	var sb strings.Builder
+	
+	// 添加XML声明
+	if xmlConfig.Formatting.Declaration {
+		encoding := xmlConfig.Formatting.Encoding
+		if encoding == "" {
+			encoding = "UTF-8"
+		}
+		sb.WriteString(fmt.Sprintf(`<?xml version="1.0" encoding="%s"?>`, encoding))
+		sb.WriteString("\n")
 	}
-	return string(output), nil
+	
+	// 生成根元素
+	rootTag := xmlConfig.RootTag
+	if rootTag == "" {
+		rootTag = "context"
+	}
+	
+	sb.WriteString(fmt.Sprintf("<%s>\n", rootTag))
+	
+	// 生成元数据
+	if data.Metadata != nil {
+		sb.WriteString("  <metadata>\n")
+		for key, value := range data.Metadata {
+			sb.WriteString(fmt.Sprintf("    <%s>%v</%s>\n", key, value, key))
+		}
+		sb.WriteString("  </metadata>\n")
+	}
+	
+	// 生成文件部分
+	if len(data.Files) > 0 {
+		filesTag := xmlConfig.FilesTag
+		if filesTag == "" {
+			filesTag = "files"
+		}
+		sb.WriteString(fmt.Sprintf("  <%s>\n", filesTag))
+		
+		fileTag := xmlConfig.FileTag
+		if fileTag == "" {
+			fileTag = "file"
+		}
+		
+		for _, file := range data.Files {
+			sb.WriteString(fmt.Sprintf("    <%s>\n", fileTag))
+			
+			// 获取字段映射
+			pathField := xmlConfig.Fields["path"]
+			if pathField == "" {
+				pathField = "path"
+			}
+			sb.WriteString(fmt.Sprintf("      <%s>%s</%s>\n", pathField, escapeXML(file.Path), pathField))
+			
+			if file.Content != "" {
+				contentField := xmlConfig.Fields["content"]
+				if contentField == "" {
+					contentField = "content"
+				}
+				sb.WriteString(fmt.Sprintf("      <%s><![CDATA[%s]]></%s>\n", contentField, file.Content, contentField))
+			}
+			
+			sb.WriteString(fmt.Sprintf("    </%s>\n", fileTag))
+		}
+		sb.WriteString(fmt.Sprintf("  </%s>\n", filesTag))
+	}
+	
+	// 生成文件夹部分
+	if len(data.Folders) > 0 {
+		folderTag := xmlConfig.FolderTag
+		if folderTag == "" {
+			folderTag = "folder"
+		}
+		
+		for _, folder := range data.Folders {
+			sb.WriteString(fmt.Sprintf("  <%s>\n", folderTag))
+			
+			pathField := xmlConfig.Fields["path"]
+			if pathField == "" {
+				pathField = "path"
+			}
+			sb.WriteString(fmt.Sprintf("    <%s>%s</%s>\n", pathField, escapeXML(folder.Path), pathField))
+			
+			if len(folder.Files) > 0 {
+				filesTag := xmlConfig.FilesTag
+				if filesTag == "" {
+					filesTag = "files"
+				}
+				sb.WriteString(fmt.Sprintf("    <%s>\n", filesTag))
+				
+				fileTag := xmlConfig.FileTag
+				if fileTag == "" {
+					fileTag = "file"
+				}
+				
+				for _, file := range folder.Files {
+					sb.WriteString(fmt.Sprintf("      <%s>\n", fileTag))
+					
+					filenameField := xmlConfig.Fields["filename"]
+					if filenameField == "" {
+						filenameField = "filename"
+					}
+					sb.WriteString(fmt.Sprintf("        <%s>%s</%s>\n", filenameField, escapeXML(file.Name), filenameField))
+					
+					if file.Content != "" {
+						contentField := xmlConfig.Fields["content"]
+						if contentField == "" {
+							contentField = "content"
+						}
+						sb.WriteString(fmt.Sprintf("        <%s><![CDATA[%s]]></%s>\n", contentField, file.Content, contentField))
+					}
+					
+					sb.WriteString(fmt.Sprintf("      </%s>\n", fileTag))
+				}
+				sb.WriteString(fmt.Sprintf("    </%s>\n", filesTag))
+			}
+			
+			sb.WriteString(fmt.Sprintf("  </%s>\n", folderTag))
+		}
+	}
+	
+	sb.WriteString(fmt.Sprintf("</%s>", rootTag))
+	
+	return sb.String(), nil
+}
+
+// escapeXML 转义XML特殊字符
+func escapeXML(s string) string {
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
+	s = strings.ReplaceAll(s, "\"", "&quot;")
+	s = strings.ReplaceAll(s, "'", "&apos;")
+	return s
 }
 
 func (cm *ConfigManager) generateJSON(data types.ContextData) (string, error) {
@@ -416,20 +544,23 @@ func LoadConfig(configPath string) (*types.Config, error) {
 func GetDefaultConfig() *types.Config {
 	return &types.Config{
 		Formats: types.FormatsConfig{
-			XML: types.FormatConfig{
-				Enabled: true,
-				Structure: map[string]interface{}{
-					"root":   "context",
-					"file":   "file",
-					"files":  "files",
-					"folder": "folder",
-				},
-				Fields: map[string]string{
-					"path":     "path",
-					"content":  "content",
-					"filename": "filename",
-				},
+			XML: types.XMLFormatConfig{
+			Enabled: true,
+			RootTag: "context",
+			FileTag: "file",
+			FilesTag: "files",
+			FolderTag: "folder",
+			Fields: map[string]string{
+				"path":     "path",
+				"content":  "content",
+				"filename": "filename",
 			},
+			Formatting: types.XMLFormattingConfig{
+				Indent:      "  ",
+				Declaration: true,
+				Encoding:    "UTF-8",
+			},
+		},
 			JSON: types.FormatConfig{
 				Enabled: true,
 				Structure: map[string]interface{}{

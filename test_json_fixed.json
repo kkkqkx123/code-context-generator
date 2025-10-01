@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "name": "test.txt",
+      "path": "test.txt",
+      "content": "test\r\noutput\r\n",
+      "size": 30,
+      "mod_time": "2025-10-01T20:17:50.4762498+08:00",
+      "is_dir": false,
+      "is_hidden": false,
+      "is_binary": false
+    }
+  ],
+  "folders": [],
+  "file_count": 1,
+  "folder_count": 0,
+  "total_size": 30,
+  "metadata": {
+    "root_path": "test.txt"
+  }
+}

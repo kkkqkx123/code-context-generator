@@ -65,7 +65,7 @@ type Config struct {
 
 // FormatsConfig 输出格式配置
 type FormatsConfig struct {
-	XML      FormatConfig `yaml:"xml" json:"xml" toml:"xml"`
+	XML      XMLFormatConfig `yaml:"xml" json:"xml" toml:"xml"`
 	JSON     FormatConfig `yaml:"json" json:"json" toml:"json"`
 	TOML     FormatConfig `yaml:"toml" json:"toml" toml:"toml"`
 	Markdown FormatConfig `yaml:"markdown" json:"markdown" toml:"markdown"`
@@ -78,6 +78,25 @@ type FormatConfig struct {
 	Fields     map[string]string      `yaml:"fields" json:"fields" toml:"fields"`
 	Template   string                 `yaml:"template" json:"template" toml:"template"`
 	Formatting map[string]interface{} `yaml:"formatting" json:"formatting" toml:"formatting"`
+}
+
+// XMLFormatConfig XML格式专用配置
+type XMLFormatConfig struct {
+	Enabled    bool              `yaml:"enabled" json:"enabled" toml:"enabled"`
+	RootTag    string            `yaml:"root_tag" json:"root_tag" toml:"root_tag"`
+	FileTag    string            `yaml:"file_tag" json:"file_tag" toml:"file_tag"`
+	FolderTag  string            `yaml:"folder_tag" json:"folder_tag" toml:"folder_tag"`
+	FilesTag   string            `yaml:"files_tag" json:"files_tag" toml:"files_tag"`
+	Fields     map[string]string   `yaml:"fields" json:"fields" toml:"fields"`
+	Template   string            `yaml:"template" json:"template" toml:"template"`
+	Formatting XMLFormattingConfig `yaml:"formatting" json:"formatting" toml:"formatting"`
+}
+
+// XMLFormattingConfig XML格式化配置
+type XMLFormattingConfig struct {
+	Indent      string `yaml:"indent" json:"indent" toml:"indent"`
+	Declaration bool   `yaml:"declaration" json:"declaration" toml:"declaration"`
+	Encoding    string `yaml:"encoding" json:"encoding" toml:"encoding"`
 }
 
 // FieldsConfig 字段配置

@@ -164,12 +164,12 @@ func (w *FileSystemWalker) GetFileInfo(path string) (*types.FileInfo, error) {
 	
 	var content string
 	if !isBinary {
-		// 只读取文本文件的内容
-		fileContent, err := os.ReadFile(path)
+		// 使用编码感知的文件读取
+		fileContent, _, err := utils.ReadFileContent(path, 0) // 0表示无大小限制
 		if err != nil {
 			return nil, fmt.Errorf("读取文件内容失败: %w", err)
 		}
-		content = string(fileContent)
+		content = fileContent
 	}
 
 	return &types.FileInfo{

@@ -2,15 +2,18 @@
   [formats.xml]
     enabled = true
     template = ""
-    [formats.xml.structure]
-      file = "file"
-      files = "files"
-      folder = "folder"
-      root = "context"
+    root_tag = "context"
+    file_tag = "file"
+    files_tag = "files"
+    folder_tag = "folder"
     [formats.xml.fields]
       content = "content"
       filename = "filename"
       path = "path"
+    [formats.xml.formatting]
+      indent = "  "
+      declaration = true
+      encoding = "UTF-8"
   [formats.json]
     enabled = true
     template = ""

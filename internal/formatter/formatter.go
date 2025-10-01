@@ -43,9 +43,45 @@ func (f *BaseFormatter) GetDescription() string {
 func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{} {
 	// 根据配置应用自定义结构
 	if f.config != nil && f.config.Structure != nil {
-		// 这里可以实现复杂的结构转换逻辑
-		return f.config.Structure
+		// 创建基于实际数据的自定义结构
+		result := make(map[string]interface{})
+		
+		// 应用结构映射
+		if rootTag, ok := f.config.Structure["root"].(string); ok && rootTag != "" {
+			result["XMLName"] = xml.Name{Local: rootTag}
+		} else {
+			result["XMLName"] = xml.Name{Local: "context"}
+		}
+		
+		// 映射文件和文件夹数据
+		if filesTag, ok := f.config.Structure["files"].(string); ok && filesTag != "" {
+			result[filesTag] = map[string]interface{}{
+				"file": data.Files,
+			}
+		} else {
+			result["files"] = map[string]interface{}{
+				"file": data.Files,
+			}
+		}
+		
+		if foldersTag, ok := f.config.Structure["folders"].(string); ok && foldersTag != "" {
+			result[foldersTag] = map[string]interface{}{
+				"folder": data.Folders,
+			}
+		} else {
+			result["folders"] = map[string]interface{}{
+				"folder": data.Folders,
+			}
+		}
+		
+		// 添加统计信息
+		result["file_count"] = data.FileCount
+		result["folder_count"] = data.FolderCount
+		result["total_size"] = data.TotalSize
+		
+		return result
 	}
+	
 	return data
 }
 
