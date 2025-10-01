@@ -10,7 +10,8 @@ var (
 		MarginBottom(1)
 
 	SelectedStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Background(lipgloss.Color("#7D56F4")).
+		Foreground(lipgloss.Color("#FFFFFF")).
 		Bold(true)
 
 	NormalStyle = lipgloss.NewStyle().
