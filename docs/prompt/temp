@@ -2,35 +2,7 @@
 
 TUI界面加载文件列表失败
 
-TUI界面中配置不生效
-(TraeAI-19) D:\ide\tool\code-context-generator [0:0] $ .\test-tui.exe
-Caught panic:
-
-runtime error: invalid memory address or nil pointer dereference
-
-Restoring terminal...
-
-goroutine 1 [running]:
-runtime/debug.Stack()
-        D:/Source/Go/src/runtime/debug/stack.go:26 +0x5e
-runtime/debug.PrintStack()
-        D:/Source/Go/src/runtime/debug/stack.go:18 +0x13
-github.com/charmbracelet/bubbletea.(*Program).Run.func1()
-        E:/goPATH/pkg/mod/github.com/charmbracelet/bubbletea@v1.1.0/tea.go:519 +0x8b        
-panic({0xd8fee0?, 0xf09cc0?})
-        D:/Source/Go/src/runtime/panic.go:792 +0x132
-code-context-generator/cmd/tui/models.(*ConfigEditorModel).renderOutputConfig(0xc00008a720) 
-        D:/ide/tool/code-context-generator/cmd/tui/models/config_editor.go:110 +0x43        
-code-context-generator/cmd/tui/models.(*ConfigEditorModel).View(0xc00008a720)
-        D:/ide/tool/code-context-generator/cmd/tui/models/config_editor.go:90 +0x8ca        
-main.MainModel.View({0x5, 0x4, {0xdf94d8, 0x1}, {0xdbbbd4, 0x4}, {0xdfa0c0, 0x0}, {0xf65a00, 0x0, ...}, ...})
-        D:/ide/tool/code-context-generator/cmd/tui/main.go:216 +0xfb
-github.com/charmbracelet/bubbletea.(*Program).eventLoop(0xc000102000, {0xdfbcd0?, 0xc000100000?}, 0xc0000881c0)
-        E:/goPATH/pkg/mod/github.com/charmbracelet/bubbletea@v1.1.0/tea.go:454 +0x7ca       
-github.com/charmbracelet/bubbletea.(*Program).Run(0xc000102000)
-        E:/goPATH/pkg/mod/github.com/charmbracelet/bubbletea@v1.1.0/tea.go:593 +0xa4e       
-main.main()
-        D:/ide/tool/code-context-generator/cmd/tui/main.go:85 +0x9a
+TUI界面中配置器管理界面按键无效，除esc、ctrl+C这2个通用组件有效。
 
 无法在TUI界面中切换输出格式。可以参考现在递归扫描、包含隐藏文件的选型
 

@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/BurntSushi/toml"
-	"github.com/goccy/go-yaml"
 	"code-context-generator/internal/env"
 	"code-context-generator/pkg/constants"
 	"code-context-generator/pkg/types"
+
+	"github.com/BurntSushi/toml"
+	"github.com/goccy/go-yaml"
 )
 
 // Manager 配置管理器接口
@@ -153,59 +153,74 @@ func (cm *ConfigManager) Save(configPath string, format string) error {
 
 // GetEnvOverrides 获取环境变量覆盖
 func (cm *ConfigManager) GetEnvOverrides() map[string]string {
-	return env.GetAllEnvVars()
+	envVars := env.GetAllEnvVars()
+	overrides := make(map[string]string)
+	
+	// 将环境变量名映射到配置字段名
+	mapping := map[string]string{
+		env.EnvDefaultFormat:     "default_format",
+		env.EnvOutputDir:         "output_dir",
+		env.EnvFilenameTemplate:  "filename_template",
+		env.EnvTimestampFormat:   "timestamp_format",
+		env.EnvMaxFileSize:       "max_file_size",
+		env.EnvMaxDepth:          "max_depth",
+		env.EnvRecursive:         "recursive",
+		env.EnvIncludeHidden:     "include_hidden",
+		env.EnvFollowSymlinks:    "follow_symlinks",
+		env.EnvExcludeBinary:     "exclude_binary",
+		env.EnvExcludePatterns:   "exclude_patterns",
+		env.EnvAutocompleteEnabled: "autocomplete_enabled",
+	}
+	
+	for envKey, fieldName := range mapping {
+		if value, exists := envVars[envKey]; exists && value != "" {
+			overrides[fieldName] = value
+		}
+	}
+	
+	return overrides
 }
 
 // applyEnvOverrides 应用环境变量覆盖到配置
 func (cm *ConfigManager) applyEnvOverrides(config *types.Config) {
-	envVars := env.GetAllEnvVars()
-	
 	// 应用输出格式覆盖
-	if format, ok := envVars["CODE_CONTEXT_DEFAULT_FORMAT"]; ok && format != "" {
+	if format := env.GetDefaultFormat(); format != "" {
 		config.Output.DefaultFormat = format
 	}
-	
+
 	// 应用输出目录覆盖
-	if outputDir, ok := envVars["CODE_CONTEXT_OUTPUT_DIR"]; ok && outputDir != "" {
+	if outputDir := env.GetOutputDir(); outputDir != "" {
 		config.Output.OutputDir = outputDir
 	}
-	
+
 	// 应用文件名模板覆盖
-	if filenameTemplate, ok := envVars["CODE_CONTEXT_FILENAME_TEMPLATE"]; ok && filenameTemplate != "" {
+	if filenameTemplate := env.GetFilenameTemplate(); filenameTemplate != "" {
 		config.Output.FilenameTemplate = filenameTemplate
 	}
-	
+
 	// 应用时间戳格式覆盖
-	if timestampFormat, ok := envVars["CODE_CONTEXT_TIMESTAMP_FORMAT"]; ok && timestampFormat != "" {
+	if timestampFormat := env.GetTimestampFormat(); timestampFormat != "" {
 		config.Output.TimestampFormat = timestampFormat
 	}
-	
+
 	// 应用最大文件大小覆盖
-	if maxFileSize, ok := envVars["CODE_CONTEXT_MAX_FILE_SIZE"]; ok && maxFileSize != "" {
+	if maxFileSize := env.GetMaxFileSize(); maxFileSize != "" {
 		config.Filters.MaxFileSize = maxFileSize
 	}
-	
+
 	// 应用最大深度覆盖
-	if maxDepth, ok := envVars["CODE_CONTEXT_MAX_DEPTH"]; ok && maxDepth != "" {
-		if depth, err := strconv.Atoi(maxDepth); err == nil {
-			config.Filters.MaxDepth = depth
-		}
-	}
-	
+	config.Filters.MaxDepth = env.GetMaxDepth()
+
 	// 应用排除模式覆盖
-	if excludePatterns, ok := envVars["CODE_CONTEXT_EXCLUDE_PATTERNS"]; ok && excludePatterns != "" {
+	if excludePatterns := env.GetExcludePatterns(); excludePatterns != "" {
 		config.Filters.ExcludePatterns = strings.Split(excludePatterns, ",")
 	}
-	
+
 	// 应用跟随符号链接覆盖
-	if followSymlinks, ok := envVars["CODE_CONTEXT_FOLLOW_SYMLINKS"]; ok && followSymlinks != "" {
-		config.Filters.FollowSymlinks = followSymlinks == "true"
-	}
-	
+	config.Filters.FollowSymlinks = env.GetFollowSymlinks()
+
 	// 应用排除二进制文件覆盖
-	if excludeBinary, ok := envVars["CODE_CONTEXT_EXCLUDE_BINARY"]; ok && excludeBinary != "" {
-		config.Filters.ExcludeBinary = excludeBinary == "true"
-	}
+	config.Filters.ExcludeBinary = env.GetExcludeBinary()
 }
 
 // GenerateOutput 生成输出内容
@@ -305,7 +320,7 @@ func (cm *ConfigManager) saveTOML(configPath string) error {
 		return fmt.Errorf("创建文件失败: %w", err)
 	}
 	defer file.Close()
-	
+
 	encoder := toml.NewEncoder(file)
 	if err := encoder.Encode(cm.config); err != nil {
 		return fmt.Errorf("TOML编码失败: %w", err)
@@ -344,7 +359,7 @@ func (cm *ConfigManager) generateTOML(data types.ContextData) (string, error) {
 func (cm *ConfigManager) generateMarkdown(data types.ContextData) (string, error) {
 	// 实现Markdown生成逻辑
 	var sb strings.Builder
-	
+
 	// 添加文件部分
 	for _, file := range data.Files {
 		sb.WriteString(fmt.Sprintf("## 文件: %s\n\n", file.Path))
@@ -352,7 +367,7 @@ func (cm *ConfigManager) generateMarkdown(data types.ContextData) (string, error
 		sb.WriteString(file.Content)
 		sb.WriteString("\n```\n\n")
 	}
-	
+
 	// 添加文件夹部分
 	for _, folder := range data.Folders {
 		sb.WriteString(fmt.Sprintf("### 文件夹: %s\n\n", folder.Path))
@@ -363,7 +378,7 @@ func (cm *ConfigManager) generateMarkdown(data types.ContextData) (string, error
 			sb.WriteString("\n```\n\n")
 		}
 	}
-	
+
 	return sb.String(), nil
 }
 
@@ -404,9 +419,9 @@ func GetDefaultConfig() *types.Config {
 			XML: types.FormatConfig{
 				Enabled: true,
 				Structure: map[string]interface{}{
-					"root":  "context",
-					"file":  "file",
-					"files": "files",
+					"root":   "context",
+					"file":   "file",
+					"files":  "files",
 					"folder": "folder",
 				},
 				Fields: map[string]string{
@@ -447,17 +462,17 @@ func GetDefaultConfig() *types.Config {
 					"code_block":    "```",
 				},
 				Formatting: map[string]interface{}{
-					"separator": "\n\n",
-					"add_toc":     false,
+					"separator":     "\n\n",
+					"add_toc":       false,
 					"code_language": true,
 				},
 			},
 		},
 		Fields: types.FieldsConfig{
 			CustomNames: map[string]string{
-				"filepath":   "path",
+				"filepath":    "path",
 				"filecontent": "content",
-				"filename":   "name",
+				"filename":    "name",
 			},
 			Filter: struct {
 				Include []string `yaml:"include" json:"include" toml:"include"`
@@ -473,7 +488,7 @@ func GetDefaultConfig() *types.Config {
 				CodeHighlight  bool `yaml:"code_highlight" json:"code_highlight" toml:"code_highlight"`
 			}{
 				MaxLength:      0,
-				AddLineNumbers:   false,
+				AddLineNumbers: false,
 				TrimWhitespace: true,
 				CodeHighlight:  false,
 			},

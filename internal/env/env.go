@@ -11,6 +11,29 @@ import (
 	"code-context-generator/pkg/constants"
 )
 
+// 环境变量常量定义
+const (
+	// 格式配置
+	EnvDefaultFormat = constants.EnvPrefix + "DEFAULT_FORMAT"
+	
+	// 输出配置
+	EnvOutputDir        = constants.EnvPrefix + "OUTPUT_DIR"
+	EnvFilenameTemplate = constants.EnvPrefix + "FILENAME_TEMPLATE"
+	EnvTimestampFormat  = constants.EnvPrefix + "TIMESTAMP_FORMAT"
+	
+	// 文件处理配置
+	EnvMaxFileSize     = constants.EnvPrefix + "MAX_FILE_SIZE"
+	EnvMaxDepth        = constants.EnvPrefix + "MAX_DEPTH"
+	EnvRecursive       = constants.EnvPrefix + "RECURSIVE"
+	EnvIncludeHidden   = constants.EnvPrefix + "INCLUDE_HIDDEN"
+	EnvFollowSymlinks  = constants.EnvPrefix + "FOLLOW_SYMLINKS"
+	EnvExcludeBinary   = constants.EnvPrefix + "EXCLUDE_BINARY"
+	EnvExcludePatterns = constants.EnvPrefix + "EXCLUDE_PATTERNS"
+	
+	// 自动补全配置
+	EnvAutocompleteEnabled = constants.EnvPrefix + "AUTOCOMPLETE_ENABLED"
+)
+
 // LoadEnv 加载.env文件到环境变量中
 func LoadEnv(envPath string) error {
 	// 如果没有指定路径，使用默认的.env文件
@@ -86,7 +109,7 @@ func ParseFileSize(sizeStr string) int64 {
 		if char >= '0' && char <= '9' {
 			numStr += string(char)
 		} else {
-			unit = sizeStr[i:]
+			unit = strings.TrimSpace(sizeStr[i:])
 			break
 		}
 	}
@@ -120,29 +143,87 @@ func GetAllEnvVars() map[string]string {
 	envVars := make(map[string]string)
 	
 	// 格式配置
-	envVars["default_format"] = GetEnvWithDefault(constants.EnvPrefix+"DEFAULT_FORMAT", "xml")
+	envVars[EnvDefaultFormat] = GetEnvWithDefault(EnvDefaultFormat, "xml")
 	
 	// 输出配置
-	envVars["output_dir"] = GetEnvWithDefault(constants.EnvPrefix+"OUTPUT_DIR", "")
+	envVars[EnvOutputDir] = GetEnvWithDefault(EnvOutputDir, "")
+	envVars[EnvFilenameTemplate] = GetEnvWithDefault(EnvFilenameTemplate, "")
+	envVars[EnvTimestampFormat] = GetEnvWithDefault(EnvTimestampFormat, "")
 	
 	// 文件处理配置
-	envVars["max_depth"] = GetEnvWithDefault(constants.EnvPrefix+"MAX_DEPTH", "0")
-	envVars["recursive"] = strconv.FormatBool(GetEnvBool(constants.EnvPrefix+"RECURSIVE", false))
-	envVars["include_hidden"] = strconv.FormatBool(GetEnvBool(constants.EnvPrefix+"INCLUDE_HIDDEN", false))
-	envVars["follow_symlinks"] = strconv.FormatBool(GetEnvBool(constants.EnvPrefix+"FOLLOW_SYMLINKS", false))
-	envVars["exclude_binary"] = strconv.FormatBool(GetEnvBool(constants.EnvPrefix+"EXCLUDE_BINARY", true))
-	
-	// 文件大小配置
-	maxFileSize := GetEnvWithDefault(constants.EnvPrefix+"MAX_FILE_SIZE", "10MB")
-	envVars["max_file_size"] = strconv.FormatInt(ParseFileSize(maxFileSize), 10)
+	envVars[EnvMaxFileSize] = GetEnvWithDefault(EnvMaxFileSize, "")
+	envVars[EnvMaxDepth] = GetEnvWithDefault(EnvMaxDepth, "")
+	envVars[EnvRecursive] = strconv.FormatBool(GetEnvBool(EnvRecursive, false))
+	envVars[EnvIncludeHidden] = strconv.FormatBool(GetEnvBool(EnvIncludeHidden, false))
+	envVars[EnvFollowSymlinks] = strconv.FormatBool(GetEnvBool(EnvFollowSymlinks, false))
+	envVars[EnvExcludeBinary] = strconv.FormatBool(GetEnvBool(EnvExcludeBinary, true))
+	envVars[EnvExcludePatterns] = GetEnvWithDefault(EnvExcludePatterns, "")
 	
 	// 自动补全配置
-	envVars["autocomplete_enabled"] = strconv.FormatBool(GetEnvBool(constants.EnvPrefix+"AUTOCOMPLETE_ENABLED", true))
+	envVars[EnvAutocompleteEnabled] = strconv.FormatBool(GetEnvBool(EnvAutocompleteEnabled, true))
 	
 	return envVars
 }
 
-// ApplyEnvOverrides 将环境变量应用到配置中
+// 获取默认格式配置
+func GetDefaultFormat() string {
+	return GetEnvWithDefault(EnvDefaultFormat, "xml")
+}
+
+// 获取输出目录配置
+func GetOutputDir() string {
+	return GetEnvWithDefault(EnvOutputDir, "")
+}
+
+// 获取文件名模板配置
+func GetFilenameTemplate() string {
+	return GetEnvWithDefault(EnvFilenameTemplate, "")
+}
+
+// 获取时间戳格式配置
+func GetTimestampFormat() string {
+	return GetEnvWithDefault(EnvTimestampFormat, "")
+}
+
+// 获取最大文件大小配置
+func GetMaxFileSize() string {
+	return GetEnvWithDefault(EnvMaxFileSize, "10MB")
+}
+
+// 获取最大深度配置
+func GetMaxDepth() int {
+	return GetEnvInt(EnvMaxDepth, 0)
+}
+
+// 获取是否递归配置
+func GetRecursive() bool {
+	return GetEnvBool(EnvRecursive, false)
+}
+
+// 获取是否包含隐藏文件配置
+func GetIncludeHidden() bool {
+	return GetEnvBool(EnvIncludeHidden, false)
+}
+
+// 获取是否跟随符号链接配置
+func GetFollowSymlinks() bool {
+	return GetEnvBool(EnvFollowSymlinks, false)
+}
+
+// 获取是否排除二进制文件配置
+func GetExcludeBinary() bool {
+	return GetEnvBool(EnvExcludeBinary, true)
+}
+
+// 获取排除模式配置
+func GetExcludePatterns() string {
+	return GetEnvWithDefault(EnvExcludePatterns, "")
+}
+
+// 获取是否启用自动补全配置
+func GetAutocompleteEnabled() bool {
+	return GetEnvBool(EnvAutocompleteEnabled, true)
+}
 func ApplyEnvOverrides(config map[string]interface{}) {
 	envVars := GetAllEnvVars()
 	
