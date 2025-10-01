@@ -158,6 +158,11 @@ func (m *FileSelectorModel) invertSelection() {
 }
 
 func (m *FileSelectorModel) updateScroll() {
+	// 确保最小高度为10，避免负数
+	if m.height <= 10 {
+		return
+	}
+	
 	visibleHeight := m.height - 10 // 减去标题和帮助信息的高度
 	if m.cursor < m.scrollOffset {
 		m.scrollOffset = m.cursor
@@ -168,12 +173,31 @@ func (m *FileSelectorModel) updateScroll() {
 }
 
 func (m *FileSelectorModel) getVisibleItems() []selector.FileItem {
+	// 确保最小高度为10，避免负数
+	if m.height <= 10 {
+		return m.items
+	}
+	
 	visibleHeight := m.height - 10
 	start := m.scrollOffset
 	end := start + visibleHeight
 	if end > len(m.items) {
 		end = len(m.items)
 	}
+	
+	// 确保start不会超出范围
+	if start >= len(m.items) {
+		start = len(m.items)
+	}
+	if start < 0 {
+		start = 0
+	}
+	
+	// 确保end不小于start
+	if end < start {
+		end = start
+	}
+	
 	return m.items[start:end]
 }
 

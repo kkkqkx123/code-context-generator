@@ -116,6 +116,7 @@ func initialModel() MainModel {
 
 // Init 初始化
 func (m MainModel) Init() tea.Cmd {
+	// 初始化时不需要做任何特殊操作
 	return nil
 }
 
@@ -163,24 +164,24 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.fileSelector != nil {
 				newModel, cmd := m.fileSelector.Update(msg)
 				m.fileSelector = newModel.(*models.FileSelectorModel)
-			return m, cmd
-		}
-	case ViewProgress:
-		if m.progressBar != nil {
-			newModel, cmd := m.progressBar.Update(msg)
-			m.progressBar = newModel.(*models.ProgressModel)
-			return m, cmd
-		}
-	case ViewResult:
-		if m.resultViewer != nil {
-			newModel, cmd := m.resultViewer.Update(msg)
-			m.resultViewer = newModel.(*models.ResultViewerModel)
-			return m, cmd
-		}
-	case ViewConfig:
-		if m.configEditor != nil {
-			newModel, cmd := m.configEditor.Update(msg)
-			m.configEditor = newModel.(*models.ConfigEditorModel)
+				return m, cmd
+			}
+		case ViewProgress:
+			if m.progressBar != nil {
+				newModel, cmd := m.progressBar.Update(msg)
+				m.progressBar = newModel.(*models.ProgressModel)
+				return m, cmd
+			}
+		case ViewResult:
+			if m.resultViewer != nil {
+				newModel, cmd := m.resultViewer.Update(msg)
+				m.resultViewer = newModel.(*models.ResultViewerModel)
+				return m, cmd
+			}
+		case ViewConfig:
+			if m.configEditor != nil {
+				newModel, cmd := m.configEditor.Update(msg)
+				m.configEditor = newModel.(*models.ConfigEditorModel)
 				return m, cmd
 			}
 		}
@@ -259,6 +260,10 @@ func (m MainModel) handleMainKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "s":
 		m.state = StateSelect
 		m.currentView = ViewSelect
+		// 重新初始化文件选择器以确保加载文件列表
+		if m.fileSelector != nil {
+			return m, m.fileSelector.Init()
+		}
 		return m, nil
 	case "c":
 		m.state = StateConfig
@@ -332,9 +337,14 @@ func (m MainModel) handleEscKey() (tea.Model, tea.Cmd) {
 }
 
 // handleSelectKeys 处理文件选择器按键
-func (m MainModel) handleSelectKeys(_ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m MainModel) handleSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 文件选择器的按键处理在FileSelectorModel中
-	// 这里只处理ESC键，已经由handleEscKey处理
+	// 将按键传递给文件选择器处理
+	if m.fileSelector != nil {
+		newModel, cmd := m.fileSelector.Update(msg)
+		m.fileSelector = newModel.(*models.FileSelectorModel)
+		return m, cmd
+	}
 	return m, nil
 }
 
@@ -360,6 +370,13 @@ func (m MainModel) handleResultKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "s": // 保存结果
 		// 这里应该实现保存逻辑
 		return m, nil
+	case "tab", "up", "down", "k", "j":
+		// 这些按键应该传递给结果查看器处理
+		if m.resultViewer != nil {
+			newModel, cmd := m.resultViewer.Update(msg)
+			m.resultViewer = newModel.(*models.ResultViewerModel)
+			return m, cmd
+		}
 	}
 	return m, nil
 }
