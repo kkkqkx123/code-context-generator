@@ -543,6 +543,11 @@ func LoadConfig(configPath string) (*types.Config, error) {
 // GetDefaultConfig 获取默认配置
 func GetDefaultConfig() *types.Config {
 	return &types.Config{
+		FileProcessing: types.FileProcessingConfig{
+			IncludeHidden:  false,
+			IncludeContent: true,  // 默认包含文件内容
+			IncludeHash:    false,
+		},
 		Formats: types.FormatsConfig{
 			XML: types.XMLFormatConfig{
 			Enabled: true,
@@ -630,7 +635,7 @@ func GetDefaultConfig() *types.Config {
 			IncludePatterns: []string{},
 			MaxDepth:        constants.DefaultMaxDepth,
 			FollowSymlinks:  false,
-			ExcludeBinary:   true, // 默认排除二进制文件
+			ExcludeBinary:   false, // 改为不排除二进制文件，让它们显示为[二进制文件]
 		},
 		Output: types.OutputConfig{
 			DefaultFormat:    constants.DefaultFormat,

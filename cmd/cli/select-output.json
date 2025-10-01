@@ -1,0 +1,49 @@
+{
+  "files": [
+    {
+      "name": "code-context-generator-cli.exe",
+      "path": "code-context-generator-cli.exe",
+      "content": "",
+      "size": 8822784,
+      "mod_time": "2025-10-01T21:26:31.4345668+08:00",
+      "is_dir": false,
+      "is_hidden": false,
+      "is_binary": true
+    },
+    {
+      "name": "config.yaml",
+      "path": "config.yaml",
+      "content": "",
+      "size": 2268,
+      "mod_time": "2025-10-01T21:26:51.5210375+08:00",
+      "is_dir": false,
+      "is_hidden": false,
+      "is_binary": false
+    },
+    {
+      "name": "main.go",
+      "path": "main.go",
+      "content": "",
+      "size": 15887,
+      "mod_time": "2025-10-01T21:25:36.500602+08:00",
+      "is_dir": false,
+      "is_hidden": false,
+      "is_binary": false
+    },
+    {
+      "name": "test-output.json",
+      "path": "test-output.json",
+      "content": "",
+      "size": 21178,
+      "mod_time": "2025-10-01T21:26:51.5220982+08:00",
+      "is_dir": false,
+      "is_hidden": false,
+      "is_binary": false
+    }
+  ],
+  "folders": [],
+  "file_count": 4,
+  "folder_count": 0,
+  "total_size": 0,
+  "metadata": {}
+}

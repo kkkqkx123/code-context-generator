@@ -138,7 +138,7 @@ func init() {
 	generateCmd.Flags().Bool("hidden", false, "包含隐藏文件")
 	generateCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示无限制)")
 	generateCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
-	generateCmd.Flags().BoolP("content", "C", false, "包含文件内容")
+	generateCmd.Flags().BoolP("content", "C", true, "包含文件内容")
 	generateCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
 	generateCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
 
@@ -282,11 +282,13 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	format, _ := cmd.Flags().GetString("format")
 	multi, _ := cmd.Flags().GetBool("multi")
 	filter, _ := cmd.Flags().GetString("filter")
+	includeContent, _ := cmd.Flags().GetBool("content")
 
 	// 创建选择器配置
 	config := &types.Config{
 		FileProcessing: types.FileProcessingConfig{
 			IncludeHidden: false,
+			IncludeContent: includeContent,
 		},
 	}
 	fileSelector := selector.NewFileSelector(config)
@@ -383,6 +385,20 @@ func runSelect(cmd *cobra.Command, args []string) error {
 		FolderCount: result.FolderCount,
 		TotalSize:   result.TotalSize,
 		Metadata:    make(map[string]interface{}),
+	}
+
+	// 如果需要包含文件内容，读取文件内容
+	if includeContent {
+		for i := range contextData.Files {
+			if !contextData.Files[i].IsBinary {
+				content, _, err := utils.ReadFileContentWithEncoding(contextData.Files[i].Path, 0)
+				if err == nil {
+					contextData.Files[i].Content = content
+				}
+			} else {
+				contextData.Files[i].Content = "[二进制文件]"
+			}
+		}
 	}
 
 	// 格式化输出
