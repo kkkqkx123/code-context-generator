@@ -74,7 +74,7 @@ func (cm *ConfigManager) Load(configPath string) error {
 
 	// 应用环境变量覆盖
 	cm.applyEnvOverrides(config)
-	
+
 	// 应用格式特定的配置覆盖（基于配置文件名）
 	applyFormatSpecificConfig(config, configPath)
 
@@ -159,29 +159,28 @@ func (cm *ConfigManager) Save(configPath string, format string) error {
 func (cm *ConfigManager) GetEnvOverrides() map[string]string {
 	envVars := env.GetAllEnvVars()
 	overrides := make(map[string]string)
-	
+
 	// 将环境变量名映射到配置字段名
 	mapping := map[string]string{
-		env.EnvDefaultFormat:     "default_format",
-		env.EnvOutputDir:         "output_dir",
-		env.EnvFilenameTemplate:  "filename_template",
-		env.EnvTimestampFormat:   "timestamp_format",
-		env.EnvMaxFileSize:       "max_file_size",
-		env.EnvMaxDepth:          "max_depth",
-		env.EnvRecursive:         "recursive",
-		env.EnvIncludeHidden:     "include_hidden",
-		env.EnvFollowSymlinks:    "follow_symlinks",
-		env.EnvExcludeBinary:     "exclude_binary",
-		env.EnvExcludePatterns:   "exclude_patterns",
-		env.EnvAutocompleteEnabled: "autocomplete_enabled",
+		env.EnvDefaultFormat:    "default_format",
+		env.EnvOutputDir:        "output_dir",
+		env.EnvFilenameTemplate: "filename_template",
+		env.EnvTimestampFormat:  "timestamp_format",
+		env.EnvMaxFileSize:      "max_file_size",
+		env.EnvMaxDepth:         "max_depth",
+		env.EnvRecursive:        "recursive",
+		env.EnvIncludeHidden:    "include_hidden",
+		env.EnvFollowSymlinks:   "follow_symlinks",
+		env.EnvExcludeBinary:    "exclude_binary",
+		env.EnvExcludePatterns:  "exclude_patterns",
 	}
-	
+
 	for envKey, fieldName := range mapping {
 		if value, exists := envVars[envKey]; exists && value != "" {
 			overrides[fieldName] = value
 		}
 	}
-	
+
 	return overrides
 }
 
@@ -335,9 +334,9 @@ func (cm *ConfigManager) saveTOML(configPath string) error {
 func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 	// 获取XML配置
 	xmlConfig := cm.config.Formats.XML
-	
+
 	var sb strings.Builder
-	
+
 	// 添加XML声明
 	if xmlConfig.Formatting.Declaration {
 		encoding := xmlConfig.Formatting.Encoding
@@ -347,15 +346,15 @@ func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 		sb.WriteString(fmt.Sprintf(`<?xml version="1.0" encoding="%s"?>`, encoding))
 		sb.WriteString("\n")
 	}
-	
+
 	// 生成根元素
 	rootTag := xmlConfig.RootTag
 	if rootTag == "" {
 		rootTag = "context"
 	}
-	
+
 	sb.WriteString(fmt.Sprintf("<%s>\n", rootTag))
-	
+
 	// 生成元数据
 	if data.Metadata != nil {
 		sb.WriteString("  <metadata>\n")
@@ -364,7 +363,7 @@ func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 		}
 		sb.WriteString("  </metadata>\n")
 	}
-	
+
 	// 生成文件部分
 	if len(data.Files) > 0 {
 		filesTag := xmlConfig.FilesTag
@@ -372,22 +371,22 @@ func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 			filesTag = "files"
 		}
 		sb.WriteString(fmt.Sprintf("  <%s>\n", filesTag))
-		
+
 		fileTag := xmlConfig.FileTag
 		if fileTag == "" {
 			fileTag = "file"
 		}
-		
+
 		for _, file := range data.Files {
 			sb.WriteString(fmt.Sprintf("    <%s>\n", fileTag))
-			
+
 			// 获取字段映射
 			pathField := xmlConfig.Fields["path"]
 			if pathField == "" {
 				pathField = "path"
 			}
 			sb.WriteString(fmt.Sprintf("      <%s>%s</%s>\n", pathField, escapeXML(file.Path), pathField))
-			
+
 			if file.Content != "" {
 				contentField := xmlConfig.Fields["content"]
 				if contentField == "" {
@@ -395,49 +394,49 @@ func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 				}
 				sb.WriteString(fmt.Sprintf("      <%s><![CDATA[%s]]></%s>\n", contentField, file.Content, contentField))
 			}
-			
+
 			sb.WriteString(fmt.Sprintf("    </%s>\n", fileTag))
 		}
 		sb.WriteString(fmt.Sprintf("  </%s>\n", filesTag))
 	}
-	
+
 	// 生成文件夹部分
 	if len(data.Folders) > 0 {
 		folderTag := xmlConfig.FolderTag
 		if folderTag == "" {
 			folderTag = "folder"
 		}
-		
+
 		for _, folder := range data.Folders {
 			sb.WriteString(fmt.Sprintf("  <%s>\n", folderTag))
-			
+
 			pathField := xmlConfig.Fields["path"]
 			if pathField == "" {
 				pathField = "path"
 			}
 			sb.WriteString(fmt.Sprintf("    <%s>%s</%s>\n", pathField, escapeXML(folder.Path), pathField))
-			
+
 			if len(folder.Files) > 0 {
 				filesTag := xmlConfig.FilesTag
 				if filesTag == "" {
 					filesTag = "files"
 				}
 				sb.WriteString(fmt.Sprintf("    <%s>\n", filesTag))
-				
+
 				fileTag := xmlConfig.FileTag
 				if fileTag == "" {
 					fileTag = "file"
 				}
-				
+
 				for _, file := range folder.Files {
 					sb.WriteString(fmt.Sprintf("      <%s>\n", fileTag))
-					
+
 					filenameField := xmlConfig.Fields["filename"]
 					if filenameField == "" {
 						filenameField = "filename"
 					}
 					sb.WriteString(fmt.Sprintf("        <%s>%s</%s>\n", filenameField, escapeXML(file.Name), filenameField))
-					
+
 					if file.Content != "" {
 						contentField := xmlConfig.Fields["content"]
 						if contentField == "" {
@@ -445,18 +444,18 @@ func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 						}
 						sb.WriteString(fmt.Sprintf("        <%s><![CDATA[%s]]></%s>\n", contentField, file.Content, contentField))
 					}
-					
+
 					sb.WriteString(fmt.Sprintf("      </%s>\n", fileTag))
 				}
 				sb.WriteString(fmt.Sprintf("    </%s>\n", filesTag))
 			}
-			
+
 			sb.WriteString(fmt.Sprintf("  </%s>\n", folderTag))
 		}
 	}
-	
+
 	sb.WriteString(fmt.Sprintf("</%s>", rootTag))
-	
+
 	return sb.String(), nil
 }
 
@@ -556,7 +555,7 @@ func LoadConfig(configPath string) (*types.Config, error) {
 func applyFormatSpecificConfig(config *types.Config, configPath string) {
 	// 将配置文件名转换为小写以便匹配
 	configName := strings.ToLower(filepath.Base(configPath))
-	
+
 	// 根据配置文件名中是否包含特定格式名称来应用相应的格式配置
 	if strings.Contains(configName, "xml") {
 		// 如果配置文件名包含xml，应用XML格式配置
@@ -586,7 +585,7 @@ func GetDefaultConfig() *types.Config {
 	return &types.Config{
 		FileProcessing: types.FileProcessingConfig{
 			IncludeHidden:  false,
-			IncludeContent: true,  // 默认包含文件内容
+			IncludeContent: true, // 默认包含文件内容
 			IncludeHash:    false,
 		},
 		Formats: types.FormatsConfig{
@@ -599,9 +598,9 @@ func GetDefaultConfig() *types.Config {
 						"filename": "filename",
 					},
 				},
-				RootTag: "context",
-				FileTag: "file",
-				FilesTag: "files",
+				RootTag:   "context",
+				FileTag:   "file",
+				FilesTag:  "files",
 				FolderTag: "folder",
 				Formatting: types.XMLFormattingConfig{
 					Indent:      "  ",
@@ -695,15 +694,6 @@ func GetDefaultConfig() *types.Config {
 				ShowHidden:   constants.DefaultShowHidden,
 				ShowSize:     constants.DefaultShowSize,
 				ShowModified: constants.DefaultShowModified,
-			},
-			Autocomplete: struct {
-				Enabled        bool `yaml:"enabled" json:"enabled" toml:"enabled"`
-				MinChars       int  `yaml:"min_chars" json:"min_chars" toml:"min_chars"`
-				MaxSuggestions int  `yaml:"max_suggestions" json:"max_suggestions" toml:"max_suggestions"`
-			}{
-				Enabled:        true,
-				MinChars:       constants.DefaultMinChars,
-				MaxSuggestions: constants.DefaultMaxSuggestions,
 			},
 		},
 	}

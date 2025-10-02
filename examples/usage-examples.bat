@@ -42,9 +42,9 @@ echo ----------------
 code-context-generator.exe generate -f xml -e "node_modules" -e ".git" -e "*.log" -s 1048576 -d 3 -o output\custom-scan.xml
 
 echo.
-echo 6️⃣ 交互式文件选择
+echo 6️⃣ 自动文件扫描
 echo ----------------
-echo 📝 这将启动交互式选择器...
+echo 📝 这将自动扫描当前目录...
 code-context-generator.exe select -m -f markdown -o output\selected-files.md
 
 echo.

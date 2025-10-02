@@ -14,7 +14,7 @@ func TestLoadEnv(t *testing.T) {
 	for _, key := range []string{"TEST_KEY_1", "TEST_KEY_2", "CODE_CONTEXT_DEFAULT_FORMAT"} {
 		originalEnv[key] = os.Getenv(key)
 	}
-	
+
 	// 测试用例结束后恢复原始环境变量
 	defer func() {
 		for key, value := range originalEnv {
@@ -30,27 +30,27 @@ func TestLoadEnv(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name     string
-		envPath  string
-		envContent string
+		name          string
+		envPath       string
+		envContent    string
 		expectedError bool
 	}{
 		{
-			name:    "加载不存在的.env文件",
-			envPath: "",
-			envContent: "",
+			name:          "加载不存在的.env文件",
+			envPath:       "",
+			envContent:    "",
 			expectedError: false, // 不应该报错
 		},
 		{
-			name:    "加载存在的.env文件",
-			envPath: ".env",
-			envContent: "TEST_KEY_1=value1\nTEST_KEY_2=value2\n",
+			name:          "加载存在的.env文件",
+			envPath:       ".env",
+			envContent:    "TEST_KEY_1=value1\nTEST_KEY_2=value2\n",
 			expectedError: false,
 		},
 		{
-			name:    "加载指定路径的.env文件",
-			envPath: "test.env",
-			envContent: "CODE_CONTEXT_DEFAULT_FORMAT=json\n",
+			name:          "加载指定路径的.env文件",
+			envPath:       "test.env",
+			envContent:    "CODE_CONTEXT_DEFAULT_FORMAT=json\n",
 			expectedError: false,
 		},
 	}
@@ -61,7 +61,7 @@ func TestLoadEnv(t *testing.T) {
 			os.Unsetenv("TEST_KEY_1")
 			os.Unsetenv("TEST_KEY_2")
 			os.Unsetenv("CODE_CONTEXT_DEFAULT_FORMAT")
-			
+
 			// 如果指定了内容，创建.env文件
 			if tt.envContent != "" && tt.envPath != "" {
 				err := os.WriteFile(tt.envPath, []byte(tt.envContent), 0644)
@@ -451,13 +451,12 @@ func TestGetAllEnvVars(t *testing.T) {
 		EnvFollowSymlinks,
 		EnvExcludeBinary,
 		EnvExcludePatterns,
-		EnvAutocompleteEnabled,
 	}
-	
+
 	for _, key := range envKeys {
 		originalValues[key] = os.Getenv(key)
 	}
-	
+
 	defer func() {
 		// 恢复原始环境变量
 		for key, value := range originalValues {
@@ -479,7 +478,6 @@ func TestGetAllEnvVars(t *testing.T) {
 	os.Setenv(EnvFollowSymlinks, "true")
 	os.Setenv(EnvExcludeBinary, "false")
 	os.Setenv(EnvExcludePatterns, "*.tmp,*.log")
-	os.Setenv(EnvAutocompleteEnabled, "false")
 
 	result := GetAllEnvVars()
 
@@ -487,48 +485,44 @@ func TestGetAllEnvVars(t *testing.T) {
 	if result[EnvDefaultFormat] != "json" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvDefaultFormat, result[EnvDefaultFormat], "json")
 	}
-	
+
 	if result[EnvOutputDir] != "/tmp/output" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvOutputDir, result[EnvOutputDir], "/tmp/output")
 	}
-	
+
 	if result[EnvMaxFileSize] != "20MB" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvMaxFileSize, result[EnvMaxFileSize], "20MB")
 	}
-	
+
 	if result[EnvMaxDepth] != "5" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvMaxDepth, result[EnvMaxDepth], "5")
 	}
-	
+
 	if result[EnvRecursive] != "true" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvRecursive, result[EnvRecursive], "true")
 	}
-	
+
 	if result[EnvIncludeHidden] != "true" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvIncludeHidden, result[EnvIncludeHidden], "true")
 	}
-	
+
 	if result[EnvFollowSymlinks] != "true" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvFollowSymlinks, result[EnvFollowSymlinks], "true")
 	}
-	
+
 	if result[EnvExcludeBinary] != "false" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvExcludeBinary, result[EnvExcludeBinary], "false")
 	}
-	
+
 	if result[EnvExcludePatterns] != "*.tmp,*.log" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvExcludePatterns, result[EnvExcludePatterns], "*.tmp,*.log")
-	}
-	
-	if result[EnvAutocompleteEnabled] != "false" {
-		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvAutocompleteEnabled, result[EnvAutocompleteEnabled], "false")
 	}
 }
 
 // TestApplyEnvOverrides 测试应用环境变量覆盖
 func TestApplyEnvOverrides(t *testing.T) {
 	config := make(map[string]interface{})
-	
+
 	// 保存原始环境变量
 	originalValues := make(map[string]string)
 	envKeys := []string{
@@ -536,11 +530,11 @@ func TestApplyEnvOverrides(t *testing.T) {
 		EnvOutputDir,
 		EnvMaxFileSize,
 	}
-	
+
 	for _, key := range envKeys {
 		originalValues[key] = os.Getenv(key)
 	}
-	
+
 	defer func() {
 		// 恢复原始环境变量
 		for key, value := range originalValues {
@@ -551,23 +545,23 @@ func TestApplyEnvOverrides(t *testing.T) {
 			}
 		}
 	}()
-	
+
 	// 设置测试环境变量
 	os.Setenv(EnvDefaultFormat, "toml")
 	os.Setenv(EnvOutputDir, "/test/output")
 	os.Setenv(EnvMaxFileSize, "50MB")
-	
+
 	ApplyEnvOverrides(config)
-	
+
 	// 验证配置是否被正确应用
 	if config[EnvDefaultFormat] != "toml" {
 		t.Errorf("ApplyEnvOverrides() 设置 %s = %v, 期望 %v", EnvDefaultFormat, config[EnvDefaultFormat], "toml")
 	}
-	
+
 	if config[EnvOutputDir] != "/test/output" {
 		t.Errorf("ApplyEnvOverrides() 设置 %s = %v, 期望 %v", EnvOutputDir, config[EnvOutputDir], "/test/output")
 	}
-	
+
 	if config[EnvMaxFileSize] != "50MB" {
 		t.Errorf("ApplyEnvOverrides() 设置 %s = %v, 期望 %v", EnvMaxFileSize, config[EnvMaxFileSize], "50MB")
 	}
@@ -589,13 +583,12 @@ func TestConfigGetterFunctions(t *testing.T) {
 		EnvFollowSymlinks,
 		EnvExcludeBinary,
 		EnvExcludePatterns,
-		EnvAutocompleteEnabled,
 	}
-	
+
 	for _, key := range envKeys {
 		originalValues[key] = os.Getenv(key)
 	}
-	
+
 	defer func() {
 		// 恢复原始环境变量
 		for key, value := range originalValues {
@@ -615,7 +608,7 @@ func TestConfigGetterFunctions(t *testing.T) {
 		os.Setenv(EnvTimestampFormat, "2006-01-02")
 		os.Setenv(EnvMaxFileSize, "15MB")
 		os.Setenv(EnvExcludePatterns, "*.cache,*.temp")
-		
+
 		tests := []struct {
 			name     string
 			function func() string
@@ -628,7 +621,7 @@ func TestConfigGetterFunctions(t *testing.T) {
 			{"GetMaxFileSize", GetMaxFileSize, "15MB"},
 			{"GetExcludePatterns", GetExcludePatterns, "*.cache,*.temp"},
 		}
-		
+
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				result := tt.function()
@@ -638,26 +631,25 @@ func TestConfigGetterFunctions(t *testing.T) {
 			})
 		}
 	})
-	
+
 	// 测试整数配置获取函数
 	t.Run("整数配置获取", func(t *testing.T) {
 		os.Setenv(EnvMaxDepth, "10")
-		
+
 		result := GetMaxDepth()
 		expected := 10
 		if result != expected {
 			t.Errorf("GetMaxDepth() = %v, 期望 %v", result, expected)
 		}
 	})
-	
+
 	// 测试布尔配置获取函数
 	t.Run("布尔配置获取", func(t *testing.T) {
 		os.Setenv(EnvRecursive, "true")
 		os.Setenv(EnvIncludeHidden, "false")
 		os.Setenv(EnvFollowSymlinks, "true")
 		os.Setenv(EnvExcludeBinary, "false")
-		os.Setenv(EnvAutocompleteEnabled, "true")
-		
+
 		tests := []struct {
 			name     string
 			function func() bool
@@ -667,9 +659,8 @@ func TestConfigGetterFunctions(t *testing.T) {
 			{"GetIncludeHidden", GetIncludeHidden, false},
 			{"GetFollowSymlinks", GetFollowSymlinks, true},
 			{"GetExcludeBinary", GetExcludeBinary, false},
-			{"GetAutocompleteEnabled", GetAutocompleteEnabled, true},
 		}
-		
+
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				result := tt.function()
@@ -696,13 +687,12 @@ func TestDefaultValues(t *testing.T) {
 		EnvFollowSymlinks,
 		EnvExcludeBinary,
 		EnvExcludePatterns,
-		EnvAutocompleteEnabled,
 	}
-	
+
 	for _, key := range envKeys {
 		os.Unsetenv(key)
 	}
-	
+
 	// 测试默认值
 	tests := []struct {
 		name     string
@@ -720,9 +710,8 @@ func TestDefaultValues(t *testing.T) {
 		{"GetFollowSymlinks默认值", GetFollowSymlinks(), false},
 		{"GetExcludeBinary默认值", GetExcludeBinary(), true},
 		{"GetExcludePatterns默认值", GetExcludePatterns(), ""},
-		{"GetAutocompleteEnabled默认值", GetAutocompleteEnabled(), true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result interface{}
@@ -736,7 +725,7 @@ func TestDefaultValues(t *testing.T) {
 			default:
 				t.Fatalf("不支持的函数返回类型")
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("%s = %v, 期望 %v", tt.name, result, tt.expected)
 			}
@@ -760,22 +749,21 @@ func TestEnvironmentVariableConstants(t *testing.T) {
 		"EnvExcludePatterns":     "CODE_CONTEXT_EXCLUDE_PATTERNS",
 		"EnvAutocompleteEnabled": "CODE_CONTEXT_AUTOCOMPLETE_ENABLED",
 	}
-	
+
 	actualConstants := map[string]string{
-		"EnvDefaultFormat":       EnvDefaultFormat,
-		"EnvOutputDir":           EnvOutputDir,
-		"EnvFilenameTemplate":    EnvFilenameTemplate,
-		"EnvTimestampFormat":     EnvTimestampFormat,
-		"EnvMaxFileSize":         EnvMaxFileSize,
-		"EnvMaxDepth":            EnvMaxDepth,
-		"EnvRecursive":           EnvRecursive,
-		"EnvIncludeHidden":       EnvIncludeHidden,
-		"EnvFollowSymlinks":      EnvFollowSymlinks,
-		"EnvExcludeBinary":       EnvExcludeBinary,
-		"EnvExcludePatterns":     EnvExcludePatterns,
-		"EnvAutocompleteEnabled": EnvAutocompleteEnabled,
+		"EnvDefaultFormat":    EnvDefaultFormat,
+		"EnvOutputDir":        EnvOutputDir,
+		"EnvFilenameTemplate": EnvFilenameTemplate,
+		"EnvTimestampFormat":  EnvTimestampFormat,
+		"EnvMaxFileSize":      EnvMaxFileSize,
+		"EnvMaxDepth":         EnvMaxDepth,
+		"EnvRecursive":        EnvRecursive,
+		"EnvIncludeHidden":    EnvIncludeHidden,
+		"EnvFollowSymlinks":   EnvFollowSymlinks,
+		"EnvExcludeBinary":    EnvExcludeBinary,
+		"EnvExcludePatterns":  EnvExcludePatterns,
 	}
-	
+
 	for name, expected := range expectedConstants {
 		if actualConstants[name] != expected {
 			t.Errorf("常量 %s = %v, 期望 %v", name, actualConstants[name], expected)

@@ -5,7 +5,7 @@
 ## 📚 文档目录
 
 ### 📖 使用文档
-- [**使用文档**](usage.md) - 完整的使用指南，包含CLI和TUI的所有功能说明
+- [**使用文档**](usage.md) - 完整的使用指南，包含CLI的所有功能说明
 - [**快速开始**](../README.md) - 项目README，快速了解项目功能
 - [**二进制文件处理**](binary-file-handling.md) - 二进制文件检测和处理机制
 
@@ -54,9 +54,7 @@
 
 ### 🎨 用户界面
 - **CLI 模式**: 功能丰富的命令行界面（基于 Cobra）
-- **TUI 模式**: 现代化的终端用户界面（基于 Bubble Tea）
 - **进度显示**: 实时进度条和状态信息
-- **主题支持**: 可定制的界面主题
 
 ## 🔧 配置文档
 
@@ -136,27 +134,7 @@ export CODE_CONTEXT_LOG_LEVEL=info
 ./code-context-generator generate --exclude-binary=false
 ```
 
-### TUI使用示例
-```bash
-# 启动TUI界面
-./code-context-generator-tui
 
-# TUI界面提供：
-# - 可视化路径输入
-# - 交互式文件选择
-# - 实时配置编辑
-# - 进度显示
-# - 结果预览
-```
-
-### 交互式选择示例
-```bash
-# 启动交互式文件选择器
-./code-context-generator select
-
-# 多选模式
-./code-context-generator select -m -f json -o selected.json
-```
 
 ## 📊 性能指标
 
@@ -208,7 +186,7 @@ export CODE_CONTEXT_LOG_LEVEL=info
 
 ### v1.0.0 (2024-01-01)
 - ✅ 初始版本发布
-- ✅ 支持CLI和TUI界面
+- ✅ 支持CLI界面
 - ✅ 支持JSON、XML、TOML、Markdown格式
 - ✅ 基础文件过滤功能
 - ✅ 配置管理系统

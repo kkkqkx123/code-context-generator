@@ -80,13 +80,9 @@ jobs:
     - name: Build CLI
       run: go build -v -o code-context-generator cmd/cli/main.go
     
-    - name: Build TUI
-      run: go build -v -o code-context-generator-tui cmd/tui/main.go
-    
     - name: Test build artifacts
       run: |
         ./code-context-generator --help
-        ./code-context-generator-tui --help || true
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
@@ -94,7 +90,6 @@ jobs:
         name: binaries
         path: |
           code-context-generator
-          code-context-generator-tui
 
   release:
     needs: build

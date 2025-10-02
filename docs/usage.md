@@ -6,7 +6,6 @@
 - **多格式输出**: 支持JSON、XML、Markdown、TOML格式
 - **智能文件过滤**: 基于扩展名和内容分析的二进制文件检测
 - **内容提取**: 可选择性包含文件内容
-- **交互式选择**: TUI界面支持文件选择
 
 ### 高级特性
 - **多线程处理**: 并行扫描提升性能
@@ -24,7 +23,6 @@
 git clone https://github.com/yourusername/code-context-generator.git
 cd code-context-generator
 go build -o code-context-generator cmd/cli/main.go
-go build -o code-context-generator-tui cmd/tui/main.go
 ```
 
 ## CLI使用指南
@@ -59,14 +57,7 @@ go build -o code-context-generator-tui cmd/tui/main.go
 ./code-context-generator generate -d 3
 ```
 
-### 交互式选择
-```bash
-# 启动文件选择器
-./code-context-generator select
 
-# 多选模式
-./code-context-generator select -m -f json -o selected.json
-```
 
 ### 配置管理
 ```bash
@@ -141,11 +132,6 @@ include_toc = true
 - `-s, --max-size`: 最大文件大小
 - `-d, --max-depth`: 最大扫描深度
 - `-c, --config`: 配置文件路径
-
-### select命令
-- `-m, --multi`: 多选模式
-- `-f, --format`: 输出格式
-- `-o, --output`: 输出文件路径
 
 ### config命令
 - `init`: 创建默认配置文件

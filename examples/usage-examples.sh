@@ -54,13 +54,12 @@ echo "----------------"
     -o output/custom-scan.xml
 
 echo ""
-echo "6️⃣ 交互式文件选择"
+echo "6️⃣ 自动文件扫描"
 echo "----------------"
-echo "📝 这将启动交互式选择器..."
-./code-context-generator select \
-    -m \
+echo "📝 这将自动扫描当前目录..."
+./code-context-generator generate \
     -f markdown \
-    -o output/selected-files.md
+    -o output/auto-scan.md
 
 echo ""
 echo "7️⃣ 生成配置文件"

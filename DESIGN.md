@@ -12,13 +12,13 @@
 code-context-generator/
 ├── cmd/                    # 命令入口
 │   ├── cli/               # CLI命令实现
-│   └── tui/               # TUI界面实现
+
 ├── internal/              # 内部核心模块
 │   ├── config/           # 配置管理
 │   ├── filesystem/       # 文件系统操作
 │   ├── formatter/        # 格式转换
 │   ├── selector/         # 文件选择器
-│   ├── autocomplete/     # 自动补全
+
 │   └── utils/            # 工具函数
 ├── pkg/                   # 可复用包
 │   ├── types/            # 公共类型定义
@@ -129,20 +129,6 @@ type ContextData struct {
 - 键盘导航
 - 实时搜索过滤
 
-**TUI组件：**
-```go
-type FileSelector struct {
-    tea.Model
-    currentPath   string
-    files        []FileInfo
-    selected     map[string]bool
-    cursor       int
-    searchMode   bool
-    searchQuery  string
-    showHidden   bool
-}
-```
-
 **特性：**
 - 支持方向键导航
 - 空格键选择/取消选择
@@ -150,28 +136,7 @@ type FileSelector struct {
 - 退格键返回上级目录
 - /键进入搜索模式
 
-#### 5. 自动补全模块 (internal/autocomplete/)
 
-**职责：**
-- 前缀匹配算法
-- 文件路径补全
-- 实时建议显示
-- 性能优化
-
-**接口定义：**
-```go
-type Autocomplete interface {
-    Complete(input string, context CompletionContext) []Suggestion
-    GetCompletions(prefix string, maxSuggestions int) []string
-    UpdateIndex(paths []string)
-}
-
-type Suggestion struct {
-    Text        string
-    Type        string // "file", "directory", "command"
-    Description string
-}
-```
 
 #### 6. CLI模块 (cmd/cli/)
 
@@ -197,16 +162,7 @@ Flags:
   --filename-template    文件名模板
 ```
 
-#### 7. TUI模块 (cmd/tui/)
 
-**界面设计：**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 代码上下文生成器 - v1.0.0                                  │
-├─────────────────────────────────────────────────────────────┤
-│ [文件选择] [配置] [生成] [退出]                           │
-├──────────────────────┬────────────────────────────────────┤
-│ ┌── 文件浏览器 ────┐ │ ┌── 配置预览 ──────────────────┐ │
 │ │ > src/           │ │ │ 格式: XML                        │ │
 │ │   main.go        │ │ │ 输出目录: ./output              │ │
 │ │   utils.go       │ │ │ 排除: *.tmp, *.log             │ │

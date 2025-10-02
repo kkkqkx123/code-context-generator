@@ -1,16 +1,14 @@
 # 代码上下文生成器 (Code Context Generator)
 
-一个智能的代码项目结构文档生成工具，支持CLI和TUI两种交互方式，能够扫描代码项目并生成结构化的文档输出。
+一个智能的代码项目结构文档生成工具，支持CLI交互方式，能够扫描代码项目并生成结构化的文档输出。
 
 ## 功能特性
 
 ### 🎯 核心功能
 - **多格式输出**: 支持 JSON、XML、TOML、Markdown 格式
-- **智能文件选择**: 交互式文件/目录选择界面
-- **自动补全**: 文件路径智能补全功能
+- **智能文件扫描**: 自动扫描项目文件和目录结构
 - **配置管理**: 灵活的配置系统，支持环境变量覆盖
 - **二进制文件处理**: 智能检测并处理二进制文件，避免内容错误
-
 ### 🚀 高级特性
 - **并发处理**: 基于 goroutine 池的高性能文件扫描
 - **大文件处理**: 流式读取，支持大文件处理
@@ -20,7 +18,7 @@
 
 ### 🎨 用户界面
 - **CLI 模式**: 功能丰富的命令行界面（基于 Cobra）
-- **TUI 模式**: 现代化的终端用户界面（基于 Bubble Tea）
+
 - **进度显示**: 实时进度条和状态信息
 - **主题支持**: 可定制的界面主题
 
@@ -37,10 +35,7 @@ cd code-context-generator
 go build -o code-context-generator cmd/cli/main.go
 ```
 
-### 构建TUI版本
-```bash
-go build -o code-context-generator-tui cmd/tui/main.go
-```
+
 
 ## 快速开始
 
@@ -48,14 +43,11 @@ go build -o code-context-generator-tui cmd/tui/main.go
 
 #### 基本用法
 ```bash
-# 扫描当前目录并输出JSON格式
-./code-context-generator generate
+# 自动扫描当前目录并生成文档
+go run main.go
 
 # 扫描指定目录
-./code-context-generator generate /path/to/project
-
-# 输出为Markdown格式
-./code-context-generator generate -f markdown -o project-structure.md
+go run main.go /path/to/project
 ```
 
 #### 高级用法
@@ -79,7 +71,7 @@ go build -o code-context-generator-tui cmd/tui/main.go
 ./code-context-generator generate --exclude-binary=false
 ```
 
-#### 交互式选择
+#### 自动文件扫描
 ```bash
 # 启动交互式文件选择器
 ./code-context-generator select
@@ -97,28 +89,9 @@ go build -o code-context-generator-tui cmd/tui/main.go
 ./code-context-generator config show
 ```
 
-#### 自动补全
-```bash
-# 获取文件路径补全建议
-./code-context-generator autocomplete /path/to/
+#
 
-# 获取目录补全建议
-./code-context-generator autocomplete -t dir /path/to/
-```
 
-### TUI 使用
-
-```bash
-# 启动TUI界面
-./code-context-generator-tui
-```
-
-TUI界面提供：
-- 可视化路径输入
-- 交互式文件选择
-- 实时配置编辑
-- 进度显示
-- 结果预览
 
 ## 📚 文档
 
@@ -219,15 +192,14 @@ include_toc = true
 ### 模块结构
 ```
 code-context-generator/
-├── cmd/
-│   ├── cli/          # CLI应用程序入口
-│   └── tui/          # TUI应用程序入口
+├── cli/          # CLI应用程序入口
+
 ├── internal/
 │   ├── config/       # 配置管理
 │   ├── filesystem/   # 文件系统操作
 │   ├── formatter/    # 格式转换
-│   ├── selector/     # 文件选择器
-│   ├── autocomplete/ # 自动补全
+│   ├── formatter/      # 输出格式化器
+
 │   └── utils/        # 工具函数
 ├── pkg/
 │   ├── types/        # 类型定义
@@ -257,24 +229,21 @@ code-context-generator/
 - 模板系统
 - 代码高亮
 
-#### 4. 选择器 (Selector)
-- 交互式文件选择
-- 多选/单选模式
-- 搜索和过滤
-- 预览功能
+#### 4. 文件系统 (Filesystem)
+- 自动文件扫描
+- 智能文件过滤
+- 高效的文件遍历
 
-#### 5. 自动补全器 (Autocompleter)
-- 智能路径补全
-- 上下文感知
-- 缓存机制
-- 模糊匹配
+#### 5. 配置管理 (Config Management)
+- 灵活的配置系统
+- 环境变量支持
+- 配置文件管理
 
 ### 技术栈
 
 #### 核心依赖
 - **CLI框架**: [Cobra](https://github.com/spf13/cobra) - 现代化的CLI应用框架
-- **TUI框架**: [Bubble Tea](https://github.com/charmbracelet/bubbletea) - 优雅的终端用户界面
-- **样式库**: [Lipgloss](https://github.com/charmbracelet/lipgloss) - 终端样式和布局
+- **TUI框架**: [Bubble Tea](https://github.com/charmbracelet/bubbletea) + [Lipgloss](https://github.com/charmbracelet/lipgloss) - 优雅的终端用户界面与样式库
 
 #### 配置和序列化
 - **配置解析**: [TOML](https://github.com/BurntSushi/toml), [YAML](https://github.com/goccy/go-yaml)
@@ -385,7 +354,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 ## 致谢
 
 - [Cobra](https://github.com/spf13/cobra) - CLI框架
-- [Bubble Tea](https://github.com/charmbracelet/bubbletea) - TUI框架
+
 - [Lipgloss](https://github.com/charmbracelet/lipgloss) - 样式库
 - 所有贡献者和支持者
 

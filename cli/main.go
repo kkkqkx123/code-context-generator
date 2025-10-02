@@ -6,12 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"code-context-generator/internal/autocomplete"
 	"code-context-generator/internal/config"
 	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/internal/formatter"
-	"code-context-generator/internal/selector"
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/types"
 
@@ -32,7 +30,7 @@ var rootCmd = &cobra.Command{
 	Short: "代码上下文生成器",
 	Long: `代码上下文生成器 - 智能生成代码项目结构文档
 
-支持多种输出格式（JSON、XML、TOML、Markdown），提供交互式文件选择，
+支持多种输出格式（JSON、XML、TOML、Markdown），提供自动文件扫描，
 自动补全功能，以及丰富的配置选项。`,
 	Version: version,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -69,15 +67,6 @@ var generateCmd = &cobra.Command{
 	RunE:  runGenerate,
 }
 
-// selectCmd 选择命令
-var selectCmd = &cobra.Command{
-	Use:   "select [路径]",
-	Short: "交互式选择文件",
-	Long:  "使用交互式界面选择要包含的文件和文件夹",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runSelect,
-}
-
 // configCmd 配置命令
 var configCmd = &cobra.Command{
 	Use:   "config",
@@ -101,22 +90,11 @@ var configShowCmd = &cobra.Command{
 // 	RunE:  runConfigInit,
 // }
 
-// autocompleteCmd 自动补全命令
-var autocompleteCmd = &cobra.Command{
-	Use:   "autocomplete [路径]",
-	Short: "文件路径自动补全",
-	Long:  "提供文件路径自动补全建议",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runAutocomplete,
-}
-
 // init 初始化函数
 func init() {
 	// 添加子命令
 	rootCmd.AddCommand(generateCmd)
-	rootCmd.AddCommand(selectCmd)
 	rootCmd.AddCommand(configCmd)
-	rootCmd.AddCommand(autocompleteCmd)
 
 	// 配置命令子命令
 	configCmd.AddCommand(configShowCmd)
@@ -138,16 +116,6 @@ func init() {
 	generateCmd.Flags().BoolP("content", "C", true, "包含文件内容")
 	generateCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
 	generateCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
-
-	// select命令标志
-	selectCmd.Flags().StringP("output", "o", "", "输出文件路径")
-	selectCmd.Flags().StringP("format", "f", "json", "输出格式")
-	selectCmd.Flags().BoolP("multi", "m", true, "允许多选")
-	selectCmd.Flags().StringP("filter", "F", "", "文件过滤器")
-
-	// autocomplete命令标志
-	autocompleteCmd.Flags().IntP("limit", "l", 10, "最大建议数量")
-	autocompleteCmd.Flags().StringP("type", "t", "file", "补全类型 (file, dir, ext, pattern)")
 }
 
 // main 主函数
@@ -295,162 +263,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runSelect 运行选择命令
-func runSelect(cmd *cobra.Command, args []string) error {
-	// 获取路径
-	path := "."
-	if len(args) > 0 {
-		path = args[0]
-	}
-
-	// 解析标志
-	output, _ := cmd.Flags().GetString("output")
-	format, _ := cmd.Flags().GetString("format")
-	multi, _ := cmd.Flags().GetBool("multi")
-	filter, _ := cmd.Flags().GetString("filter")
-	includeContent, _ := cmd.Flags().GetBool("content")
-
-	// 创建选择器配置
-	config := &types.Config{
-		FileProcessing: types.FileProcessingConfig{
-			IncludeHidden: false,
-			IncludeContent: includeContent,
-		},
-	}
-	fileSelector := selector.NewFileSelector(config)
-
-	// 执行选择
-	if verbose {
-		fmt.Printf("启动交互式选择器... (多选: %v, 过滤器: %s)\n", multi, filter)
-	}
-
-	// 选择文件和目录
-	selectOptions := &types.SelectOptions{
-		Recursive:       true,
-		ShowHidden:      false,
-		MaxDepth:        0,
-		IncludePatterns: []string{},
-		ExcludePatterns: []string{},
-	}
-
-	files, err := fileSelector.SelectFiles(path, selectOptions)
-	if err != nil {
-		return fmt.Errorf("选择文件失败: %w", err)
-	}
-
-	folders, err := fileSelector.SelectFolders(path, selectOptions)
-	if err != nil {
-		return fmt.Errorf("选择目录失败: %w", err)
-	}
-
-	// 合并选择结果
-	allItems := append(files, folders...)
-
-	// 交互式选择
-	selected, err := fileSelector.InteractiveSelect(allItems, "选择文件和目录:")
-	if err != nil {
-		return fmt.Errorf("选择失败: %w", err)
-	}
-
-	if len(selected) == 0 {
-		fmt.Println("未选择任何文件")
-		return nil
-	}
-
-	if verbose {
-		fmt.Printf("已选择 %d 个项目\n", len(selected))
-	}
-
-	// 创建结果
-	result := &types.WalkResult{
-		Files:    []types.FileInfo{},
-		Folders:  []types.FolderInfo{},
-		RootPath: path,
-	}
-
-	// 添加选择的文件和目录
-	for _, item := range selected {
-		info, err := os.Stat(item)
-		if err != nil {
-			continue
-		}
-
-		if info.IsDir() {
-			result.Folders = append(result.Folders, types.FolderInfo{
-				Path:  item,
-				Name:  info.Name(),
-				Size:  0,
-				Count: 0,
-			})
-		} else {
-			result.Files = append(result.Files, types.FileInfo{
-				Path:     item,
-				Name:     info.Name(),
-				Size:     info.Size(),
-				ModTime:  info.ModTime(),
-				IsBinary: utils.IsBinaryFile(item),
-			})
-		}
-	}
-
-	// 更新统计信息
-	result.FileCount = len(result.Files)
-	result.FolderCount = len(result.Folders)
-
-	// 创建格式化器
-	formatter, err := formatter.NewFormatter(format, cfg)
-	if err != nil {
-		return fmt.Errorf("创建格式化器失败: %w", err)
-	}
-
-	// 将 WalkResult 转换为 ContextData
-	contextData := types.ContextData{
-		Files:       result.Files,
-		Folders:     result.Folders,
-		FileCount:   result.FileCount,
-		FolderCount: result.FolderCount,
-		TotalSize:   result.TotalSize,
-		Metadata:    make(map[string]interface{}),
-	}
-
-	// 如果需要包含文件内容，读取文件内容
-	if includeContent {
-		for i := range contextData.Files {
-			if !contextData.Files[i].IsBinary {
-				content, _, err := utils.ReadFileContentWithEncoding(contextData.Files[i].Path, 0)
-				if err == nil {
-					contextData.Files[i].Content = content
-				}
-			} else {
-				contextData.Files[i].Content = "[二进制文件]"
-			}
-		}
-	}
-
-	// 格式化输出
-	outputData, err := formatter.Format(contextData)
-	if err != nil {
-		return fmt.Errorf("格式化输出失败: %w", err)
-	}
-
-	// 输出结果
-	if output != "" {
-		// 标准化换行符为当前操作系统格式
-		normalizedData := utils.NormalizeLineEndings(outputData)
-		if err := os.WriteFile(output, []byte(normalizedData), 0644); err != nil {
-			return fmt.Errorf("写入输出文件失败: %w", err)
-		}
-		if verbose {
-			fmt.Println(utils.SuccessColor("输出已写入:"), output)
-		}
-	} else {
-		// 控制台输出也标准化换行符
-		fmt.Println(utils.NormalizeLineEndings(outputData))
-	}
-
-	return nil
-}
-
 // runConfigShow 运行配置显示命令
 func runConfigShow(cmd *cobra.Command, args []string) error {
 	// 生成配置输出
@@ -473,55 +285,6 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 // 	fmt.Println(utils.SuccessColor("配置文件已创建: config.yaml"))
 // 	return nil
 // }
-
-// runAutocomplete 运行自动补全命令
-func runAutocomplete(cmd *cobra.Command, args []string) error {
-	// 获取路径
-	path := ""
-	if len(args) > 0 {
-		path = args[0]
-	}
-
-	// 解析标志
-	limit, _ := cmd.Flags().GetInt("limit")
-	completeType, _ := cmd.Flags().GetString("type")
-
-	// 创建自动补全器
-	autocompleter := autocomplete.NewAutocompleter(&types.AutocompleteConfig{
-		Enabled:        true,
-		MinChars:       1,
-		MaxSuggestions: limit,
-	})
-
-	// 获取建议
-	completeTypeEnum := types.CompleteFilePath
-	switch completeType {
-	case "dir":
-		completeTypeEnum = types.CompleteDirectory
-	case "ext":
-		completeTypeEnum = types.CompleteExtension
-	case "pattern":
-		completeTypeEnum = types.CompletePattern
-	case "generic":
-		completeTypeEnum = types.CompleteGeneric
-	}
-
-	context := &types.CompleteContext{
-		Type: completeTypeEnum,
-		Data: make(map[string]interface{}),
-	}
-	suggestions, err := autocompleter.Complete(path, context)
-	if err != nil {
-		return fmt.Errorf("自动补全失败: %w", err)
-	}
-
-	// 输出建议
-	for _, suggestion := range suggestions {
-		fmt.Println(suggestion)
-	}
-
-	return nil
-}
 
 // isValidFormat 检查格式是否有效
 func isValidFormat(format string) bool {

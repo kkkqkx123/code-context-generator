@@ -148,19 +148,7 @@ filters:
   exclude_binary: true
 ```
 
-### UI配置（UI）
 
-```yaml
-ui:
-  selector:
-    show_hidden: false
-    show_size: true
-    show_modified: true
-  autocomplete:
-    enabled: true
-    min_chars: 1
-    max_suggestions: 10
-```
 
 ## 环境变量配置
 
@@ -177,7 +165,7 @@ ui:
 - `CONTEXT_FOLLOW_SYMLINKS`: 是否跟随符号链接
 - `CONTEXT_EXCLUDE_BINARY`: 是否排除二进制文件
 - `CONTEXT_EXCLUDE_PATTERNS`: 排除模式（逗号分隔）
-- `CONTEXT_AUTOCOMPLETE_ENABLED`: 是否启用自动完成
+
 
 ## 完整配置示例
 

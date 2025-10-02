@@ -70,15 +70,10 @@ go run cmd/cli/main.go generate \
   --exclude-patterns "*_test.go,*.tmp" \
   --max-depth 3
 
-# 交互式文件选择
-go run cmd/cli/main.go select -f json -o selected.json
-
 # 配置管理
 go run cmd/cli/main.go config show
 go run cmd/cli/main.go config set output.format markdown
 
-# 自动补全设置
-go run cmd/cli/main.go autocomplete --type file
 ```
 
 #### 优点

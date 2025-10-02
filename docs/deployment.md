@@ -18,8 +18,7 @@ go mod download
 # 构建CLI版本
 go build -o code-context-generator cmd/cli/main.go
 
-# 构建TUI版本  
-go build -o code-context-generator-tui cmd/tui/main.go
+
 ```
 
 #### 安装到系统路径
@@ -115,10 +114,7 @@ exclude_patterns = [".git", "node_modules", "*.tmp"]
 include_content = true
 include_hash = true
 
-[ui]
-theme = "dark"
-show_progress = true
-show_preview = true
+
 
 #### 智能格式覆盖配置
 工具支持基于配置文件名的智能格式识别功能：
@@ -411,7 +407,7 @@ wget "https://github.com/yourusername/code-context-generator/releases/download/$
 # 解压和安装
 tar -xzf code-context-generator-linux-amd64.tar.gz
 sudo cp code-context-generator /usr/local/bin/
-sudo cp code-context-generator-tui /usr/local/bin/
+
 
 # 创建配置目录
 mkdir -p ~/.config/code-context-generator

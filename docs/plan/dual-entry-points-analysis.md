@@ -40,7 +40,7 @@ go run main.go  # 进入交互式模式
 
 **特点**:
 - **专业CLI框架**: 基于Cobra构建的完整命令行应用
-- **丰富的命令结构**: 支持generate、select、config、autocomplete等子命令
+- **丰富的命令结构**: 支持generate、config等子命令
 - **完善的参数体系**: 支持长参数、短参数、默认值、参数验证
 - **配置管理**: 支持配置文件加载和环境变量
 - **高级功能**: 支持递归控制、文件过滤、内容包含等高级选项
@@ -48,9 +48,7 @@ go run main.go  # 进入交互式模式
 **支持的命令格式**:
 ```bash
 go run cmd/cli/main.go generate -f markdown -o output.md --max-depth 3
-go run cmd/cli/main.go select -f json -o selected.json
 go run cmd/cli/main.go config show
-go run cmd/cli/main.go autocomplete --type file
 ```
 
 **优点**:

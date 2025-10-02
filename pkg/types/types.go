@@ -158,32 +158,7 @@ type UIConfig struct {
 		ShowSize     bool `yaml:"show_size" json:"show_size" toml:"show_size"`
 		ShowModified bool `yaml:"show_modified" json:"show_modified" toml:"show_modified"`
 	} `yaml:"selector" json:"selector" toml:"selector"`
-	Autocomplete AutocompleteConfig `yaml:"autocomplete" json:"autocomplete" toml:"autocomplete"`
 }
-
-// AutocompleteConfig 自动补全配置
-type AutocompleteConfig struct {
-	Enabled        bool `yaml:"enabled" json:"enabled" toml:"enabled"`
-	MinChars       int  `yaml:"min_chars" json:"min_chars" toml:"min_chars"`
-	MaxSuggestions int  `yaml:"max_suggestions" json:"max_suggestions" toml:"max_suggestions"`
-}
-
-// CompleteContext 补全上下文
-type CompleteContext struct {
-	Type CompleteType
-	Data map[string]interface{}
-}
-
-// CompleteType 补全类型
-type CompleteType int
-
-const (
-	CompleteFilePath CompleteType = iota
-	CompleteDirectory
-	CompleteExtension
-	CompletePattern
-	CompleteGeneric
-)
 
 // SelectOptions 选择选项
 type SelectOptions struct {
@@ -247,7 +222,6 @@ type CLIOptions struct {
 	OutputDir        string
 	FilenameTemplate string
 	ValidateConfig   bool
-	NonInteractive   bool
 }
 
 // AppError 应用错误类型

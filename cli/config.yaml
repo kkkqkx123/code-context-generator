@@ -69,31 +69,40 @@ filters:
   - "*.tmp"
   - "*.log"
   - "*.swp"
-  - .*
-  - node_modules/
+  - ".*"
+  - .git
+  - node_modules
+  - "*.exe"
+  - "*.dll"
+  - "*.so"
+  - "*.dylib"
+  - "*.class"
+  - "*.pyc"
+  - __pycache__
+  - .DS_Store
+  - Thumbs.db
   - target/
   - dist/
   - build/
   - .env
-  - .git/
   - .vscode/
   - .idea/
-  - __pycache__/
-  - "*.pyc"
   - .venv
-  - "*.class"
   include_patterns: []
   max_depth: 0
   follow_symlinks: false
-  exclude_binary: false
+  exclude_binary: true
 output:
-  format: ""
+  format: markdown
   file_path: ""
-  encoding: ""
+  encoding: utf-8
   default_format: xml
   output_dir: ""
   filename_template: context_{{.timestamp}}.{{.extension}}
   timestamp_format: "20060102_150405"
+  include_metadata: true
+  include_statistics: true
+  template_path: ""
 ui:
   theme: ""
   show_progress: false
@@ -110,20 +119,24 @@ ui:
     max_suggestions: 10
 file_processing:
   includehidden: false
-  maxfilesize: 0
+  maxfilesize: "1MB"
   maxdepth: 0
   excludepatterns: []
   includepatterns: []
   includecontent: true
   includehash: false
+  binary_detection: true
+  encoding_detection: true
 performance:
   maxworkers: 0
-  buffersize: 0
+  buffersize: 4096
   cacheenabled: false
-  cachesize: 0
+  cachesize: 1000
 logging:
-  level: ""
+  level: info
   filepath: ""
   maxsize: 0
   maxbackups: 0
   maxage: 0
+  format: text
+  output: stdout

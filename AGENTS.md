@@ -19,7 +19,7 @@ go 1.24.5
 
 ## 额外要求
 1. 支持在cli界面中临时选择使用哪种导出格式
-2. 支持TUI界面、cli命令2种方式使用。配置项也应当支持在执行cli命令时通过参数的形式指定
+2. 支持CLI命令方式使用。配置项也应当支持在执行cli命令时通过参数的形式指定
 **CLI参数支持**：
 ```bash
 # 基本使用
@@ -38,20 +38,12 @@ code-context-generator --output-dir ./outputs --filename-template "project_{{.ti
 code-context-generator --validate-config --config config.yaml
 ```
 
-**TUI界面增强**：
-- 提供配置预览功能，实时显示当前配置的效果
-- 支持配置编辑界面，可在TUI中直接修改配置
-- 提供格式选择器，支持实时切换输出格式
-- 显示配置文件语法检查和错误提示
-
 3. 必须能够处理中文路径、文件名
 4. 必须拥有高性能
-5. 采取简单的TUI设计，避免任何复杂的UI设计，以免影响性能，降低可靠性
-6. 必须支持windows、linux的文件系统。生成文件中的路径统一使用正斜杠（/）作为路径分隔符
-7. 提供交互式选择功能和基于前缀匹配的自动补全功能，且该功能必须支持windows和linux两种环境
-8. 必须正确忽略选中的文件夹中的隐藏文件（如.git, .vscode, node_modules等），且在遍历路径前读取.gitignore的规则，忽略这些文件与目录
-9. 必须支持递归遍历子文件夹，且在遍历子文件夹时必须正确处理符号链接（symbolic link）
-10. 是否遍历所有子目录(默认只遍历1层)、开启自动补全、符号链接功能需要支持在.env文件中配置。使用默认值均为false。
+5. 必须支持windows、linux的文件系统。生成文件中的路径统一使用正斜杠（/）作为路径分隔符
+6. 必须正确忽略选中的文件夹中的隐藏文件（如.git, .vscode, node_modules等），且在遍历路径前读取.gitignore的规则，忽略这些文件与目录
+7. 必须支持递归遍历子文件夹，且在遍历子文件夹时必须正确处理符号链接（symbolic link）
+8. 是否遍历所有子目录(默认只遍历1层)、符号链接功能需要支持在.env文件中配置。使用默认值均为false。
 11. 采用统一配置文件方案，支持YAML、JSON、TOML三种配置文件格式，使用Go标准库进行解析和生成：
 
 **配置文件格式（config.yaml）**：
@@ -141,17 +133,7 @@ output:
   filename_template: "context_{{.timestamp}}.{{.extension}}"
   timestamp_format: "20060102_150405"
 
-# 界面配置
-ui:
-  selector:
-    show_hidden: false
-    show_size: true
-    show_modified: false
-    
-  autocomplete:
-    enabled: true
-    min_chars: 1
-    max_suggestions: 10
+
 ```
 
 **配置说明**：
@@ -186,7 +168,6 @@ ui:
 
 1. 使用Go语言开发，利用其跨平台特性和丰富的标准库
 2. 采用模块化设计，将文件处理、格式转换、配置管理等功能分离
-3. 使用成熟的第三方库来处理TUI界面（如bubbletea）
-4. 考虑使用并发处理来提高性能
-5. 实现完善的错误处理和日志记录机制
+3. 考虑使用并发处理来提高性能
+4. 实现完善的错误处理和日志记录机制
 

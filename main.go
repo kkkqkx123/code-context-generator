@@ -10,7 +10,6 @@ import (
 	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/internal/formatter"
-	"code-context-generator/internal/selector"
 	"code-context-generator/pkg/types"
 )
 
@@ -55,7 +54,7 @@ func main() {
 		fmt.Println("  go run main.go generate -f markdown -o output.md")
 		fmt.Println("  go run main.go -f json")
 		fmt.Println()
-		fmt.Println("如果不指定格式，将使用交互式选择")
+		fmt.Println("如果不指定格式，将使用默认格式 (markdown)")
 		return
 	}
 
@@ -77,116 +76,35 @@ func main() {
 	fmt.Printf("当前目录: %s\n", currentDir)
 	fmt.Println()
 
-	// 创建文件选择器
-	fileSelector := selector.NewFileSelector(cm.Get())
-
-	// 选择要打包的文件
-	fmt.Println("请选择要打包的文件和文件夹...")
-	selectOptions := &types.SelectOptions{
-		Recursive:       true,
-		ShowHidden:      false,
-		MaxDepth:        0,
-		IncludePatterns: []string{},
-		ExcludePatterns: []string{".git", "node_modules", "*.exe", "*.dll"},
-	}
-
-	// 选择文件
-	files, err := fileSelector.SelectFiles(currentDir, selectOptions)
-	if err != nil {
-		log.Fatalf("选择文件失败: %v", err)
-	}
-
-	// 选择文件夹
-	folders, err := fileSelector.SelectFolders(currentDir, selectOptions)
-	if err != nil {
-		log.Fatalf("选择文件夹失败: %v", err)
-	}
-
-	// 合并所有项目
-	allItems := append(files, folders...)
-	if len(allItems) == 0 {
-		fmt.Println("未选择任何文件或文件夹")
-		return
-	}
-
-	// 交互式选择
-	selected, err := fileSelector.InteractiveSelect(allItems, "选择要打包的文件和目录:")
-	if err != nil {
-		log.Fatalf("选择失败: %v", err)
-	}
-
-	if len(selected) == 0 {
-		fmt.Println("未选择任何项目")
-		return
-	}
-
-	fmt.Printf("已选择 %d 个项目\n", len(selected))
-
-	// 创建遍历结果
-	result := &types.WalkResult{
-		Files:    []types.FileInfo{},
-		Folders:  []types.FolderInfo{},
-		RootPath: currentDir,
-	}
-
-	// 获取文件系统遍历器
+	// 创建文件系统遍历器
 	walker := filesystem.NewWalker()
 
-	// 处理选中的项目
-	for _, item := range selected {
-		info, err := os.Stat(item)
-		if err != nil {
-			log.Printf("警告: 无法访问 %s: %v", item, err)
-			continue
-		}
-
-		if info.IsDir() {
-			// 如果是目录，遍历其中的文件
-			walkOptions := &types.WalkOptions{
-				MaxDepth:        3,       // 限制子目录深度
-				MaxFileSize:     1048576, // 1MB
-				ExcludePatterns: []string{".git", "node_modules", "*.exe", "*.dll"},
-				ExcludeBinary:   false,
-				ShowHidden:      false,
-			}
-
-			contextData, err := walker.Walk(item, walkOptions)
-			if err != nil {
-				log.Printf("警告: 遍历目录 %s 失败: %v", item, err)
-				continue
-			}
-
-			result.Files = append(result.Files, contextData.Files...)
-			result.Folders = append(result.Folders, contextData.Folders...)
-		} else {
-			// 如果是文件，直接获取信息
-			fileInfo, err := walker.GetFileInfo(item)
-			if err != nil {
-				log.Printf("警告: 获取文件信息 %s 失败: %v", item, err)
-				continue
-			}
-			result.Files = append(result.Files, *fileInfo)
-		}
+	// 设置遍历选项
+	walkOptions := &types.WalkOptions{
+		MaxDepth:        3,       // 限制子目录深度
+		MaxFileSize:     1048576, // 1MB
+		ExcludePatterns: []string{".git", "node_modules", "*.exe", "*.dll"},
+		ExcludeBinary:   false,
+		ShowHidden:      false,
 	}
 
-	// 更新统计信息
-	result.FileCount = len(result.Files)
-	result.FolderCount = len(result.Folders)
-	for _, file := range result.Files {
-		result.TotalSize += file.Size
+	// 遍历当前目录
+	contextData, err := walker.Walk(currentDir, walkOptions)
+	if err != nil {
+		log.Fatalf("遍历目录失败: %v", err)
 	}
+
+	if len(contextData.Files) == 0 {
+		fmt.Println("未找到任何文件")
+		return
+	}
+
+	fmt.Printf("找到 %d 个文件, %d 个目录\n", contextData.FileCount, contextData.FolderCount)
 
 	// 转换为上下文数据
-	contextData := types.ContextData{
-		Files:       result.Files,
-		Folders:     result.Folders,
-		FileCount:   result.FileCount,
-		FolderCount: result.FolderCount,
-		TotalSize:   result.TotalSize,
-		Metadata: map[string]interface{}{
-			"root_path":    currentDir,
-			"generated_at": "现在",
-		},
+	contextData.Metadata = map[string]interface{}{
+		"root_path":    currentDir,
+		"generated_at": "现在",
 	}
 
 	// 确定输出格式
@@ -206,7 +124,7 @@ func main() {
 		}
 		fmt.Printf("使用指定的输出格式: %s\n", selectedFormat)
 	} else {
-		// 交互式选择格式
+		// 默认格式
 		fmt.Println("\n选择输出格式:")
 		fmt.Println("1. JSON")
 		fmt.Println("2. XML")
@@ -235,7 +153,7 @@ func main() {
 	}
 
 	// 格式化输出
-	outputData, err := formatter.Format(contextData)
+	outputData, err := formatter.Format(*contextData)
 	if err != nil {
 		log.Fatalf("格式化输出失败: %v", err)
 	}
@@ -256,6 +174,6 @@ func main() {
 	}
 
 	fmt.Printf("\n✅ 成功生成代码上下文文件: %s\n", finalOutputFile)
-	fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", result.FileCount, result.FolderCount)
-	fmt.Printf("💾 总大小: %.2f MB\n", float64(result.TotalSize)/(1024*1024))
+	fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", contextData.FileCount, contextData.FolderCount)
+	fmt.Printf("💾 总大小: %.2f MB\n", float64(contextData.TotalSize)/(1024*1024))
 }

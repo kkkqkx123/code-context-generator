@@ -29,9 +29,6 @@ const (
 	EnvFollowSymlinks  = constants.EnvPrefix + "FOLLOW_SYMLINKS"
 	EnvExcludeBinary   = constants.EnvPrefix + "EXCLUDE_BINARY"
 	EnvExcludePatterns = constants.EnvPrefix + "EXCLUDE_PATTERNS"
-	
-	// 自动补全配置
-	EnvAutocompleteEnabled = constants.EnvPrefix + "AUTOCOMPLETE_ENABLED"
 )
 
 // LoadEnv 加载.env文件到环境变量中
@@ -159,9 +156,6 @@ func GetAllEnvVars() map[string]string {
 	envVars[EnvExcludeBinary] = strconv.FormatBool(GetEnvBool(EnvExcludeBinary, true))
 	envVars[EnvExcludePatterns] = GetEnvWithDefault(EnvExcludePatterns, "")
 	
-	// 自动补全配置
-	envVars[EnvAutocompleteEnabled] = strconv.FormatBool(GetEnvBool(EnvAutocompleteEnabled, true))
-	
 	return envVars
 }
 
@@ -218,11 +212,6 @@ func GetExcludeBinary() bool {
 // 获取排除模式配置
 func GetExcludePatterns() string {
 	return GetEnvWithDefault(EnvExcludePatterns, "")
-}
-
-// 获取是否启用自动补全配置
-func GetAutocompleteEnabled() bool {
-	return GetEnvBool(EnvAutocompleteEnabled, true)
 }
 func ApplyEnvOverrides(config map[string]interface{}) {
 	envVars := GetAllEnvVars()

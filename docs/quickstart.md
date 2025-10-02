@@ -58,16 +58,7 @@ go build -o code-context-generator cmd/cli/main.go
 ./code-context-generator generate -s 10485760
 ```
 
-### 交互式选择
-```bash
-# 启动文件选择器
-./code-context-generator select
-```
 
-### TUI界面
-```bash
-./code-context-generator-tui
-```
 
 ## 配置文件
 

@@ -85,42 +85,46 @@ filters:
   follow_symlinks: false
   exclude_binary: true
 output:
-  format: ""
-  file_path: ""
-  encoding: ""
+  format: "markdown"
+  encoding: "utf-8"
+  includemetadata: true
+  includestatistics: true
+  templatepath: ""
   default_format: xml
   output_dir: ""
   filename_template: context_{{.timestamp}}.{{.extension}}
   timestamp_format: "20060102_150405"
-ui:
-  theme: ""
-  show_progress: false
-  show_size: false
-  show_date: false
-  show_preview: false
-  selector:
-    show_hidden: false
-    show_size: true
-    show_modified: false
-  autocomplete:
-    enabled: true
-    min_chars: 1
-    max_suggestions: 10
+
 file_processing:
   includehidden: false
-  maxfilesize: 0
+  includecontent: true
+  maxfilesize: "1MB"
+  binarydetection: true
+  encodingdetection: true
   maxdepth: 0
-  excludepatterns: []
+  excludepatterns:
+    - ".git"
+    - "node_modules"
+    - "*.exe"
+    - "*.dll"
+    - "*.so"
+    - "*.dylib"
+    - "*.class"
+    - "*.pyc"
+    - "__pycache__"
+    - ".DS_Store"
+    - "Thumbs.db"
   includepatterns: []
-  includecontent: false
   includehash: false
 performance:
   maxworkers: 0
-  buffersize: 0
+  buffersize: 4096
+  cachesize: 1000
   cacheenabled: false
-  cachesize: 0
 logging:
-  level: ""
+  level: "info"
+  format: "text"
+  output: "stdout"
   filepath: ""
   maxsize: 0
   maxbackups: 0

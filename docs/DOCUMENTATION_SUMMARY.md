@@ -68,7 +68,7 @@
 ## 🎯 特色内容
 
 ### 📖 使用文档亮点
-- 🎨 **CLI和TUI双界面**: 详细的界面操作指南
+- 🎨 **CLI界面**: 详细的界面操作指南
 - 🔧 **配置系统**: 完整的配置参数说明
 - 🎯 **智能格式覆盖**: 基于配置文件名自动识别格式
 - 📊 **格式支持**: JSON、XML、TOML、Markdown四种格式
@@ -94,7 +94,7 @@
 ### 📚 外部资源
 - [Go官方文档](https://golang.org/doc/)
 - [Cobra CLI框架](https://github.com/spf13/cobra)
-- [Bubble Tea TUI框架](https://github.com/charmbracelet/bubbletea)
+
 - [TOML配置格式](https://toml.io/)
 
 ### 🏠 项目资源

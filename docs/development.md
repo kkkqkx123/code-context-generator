@@ -48,16 +48,10 @@ go install github.com/go-delve/delve/cmd/dlv@latest
 ```
 code-context-generator/
 ├── cmd/                    # 应用程序入口
-│   ├── cli/               # CLI应用入口
-│   │   ├── main.go
-│   │   └── config.yaml
-│   └── tui/               # TUI应用入口
-│   │   ├── main.go
-│   │   └── models/
+│   └── cli/               # CLI应用入口
+│       ├── main.go
+│       └── config.yaml
 ├── internal/              # 内部包
-│   ├── autocomplete/      # 自动补全功能
-│   │   ├── autocomplete.go
-│   │   └── autocomplete_test.go
 │   ├── config/           # 配置管理
 │   │   ├── config.go
 │   │   ├── config.yaml
@@ -240,9 +234,6 @@ go list -json -m all | nancy sleuth
 # 构建CLI版本
 go build -o bin/code-context-generator cmd/cli/main.go
 
-# 构建TUI版本
-go build -o bin/code-context-generator-tui cmd/tui/main.go
-
 # 构建所有版本
 make build
 
@@ -256,9 +247,6 @@ GOOS=darwin GOARCH=amd64 go build -o bin/code-context-generator-darwin cmd/cli/m
 ```bash
 # 运行CLI版本
 ./bin/code-context-generator --help
-
-# 运行TUI版本
-./bin/code-context-generator-tui
 
 # 使用示例
 ./bin/code-context-generator generate . -f json -o output.json
