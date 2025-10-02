@@ -36,9 +36,9 @@ type FileSystemWalker struct {
 // NewWalker 创建遍历器
 func NewWalker() Walker {
 	return &FileSystemWalker{
-		maxWorkers:   10,              // 限制并发worker数量
-		maxFileCount: 10000,           // 限制最大文件数量
-		maxDepth:     20,              // 限制最大深度
+		maxWorkers:   10,               // 限制并发worker数量
+		maxFileCount: 1000,             // 限制最大文件数量
+		maxDepth:     5,                // 限制最大深度
 		timeout:      30 * time.Second, // 30秒超时
 	}
 }
@@ -74,7 +74,7 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var walkErrors []error
-	
+
 	// 初始化contextData的统计信息
 	contextData.Files = []types.FileInfo{}
 	contextData.Folders = []types.FolderInfo{}
@@ -99,7 +99,7 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 	}
 
 	semaphore := make(chan struct{}, w.maxWorkers) // 限制并发数量
-	progressMu := sync.Mutex{} // 保护进度更新
+	progressMu := sync.Mutex{}                     // 保护进度更新
 
 	// 遍历文件系统
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
@@ -153,7 +153,7 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 				processedFiles++
 				currentProcessed := processedFiles
 				progressMu.Unlock()
-				
+
 				if progressCallback != nil && currentProcessed%10 == 0 { // 每10个文件更新一次进度
 					progressCallback(currentProcessed, totalFiles, filepath.Base(filePath))
 				}
@@ -210,7 +210,7 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, rootPath string, optio
 		if err != nil {
 			return false
 		}
-		
+
 		for _, selectedFile := range options.SelectedFiles {
 			absSelectedFile, err := filepath.Abs(selectedFile)
 			if err != nil {
@@ -296,6 +296,6 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, rootPath string, optio
 			}
 		}
 	}
-	
+
 	return true
 }

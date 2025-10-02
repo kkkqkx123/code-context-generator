@@ -78,18 +78,18 @@ jobs:
         go-version: 1.24
     
     - name: Build CLI
-      run: go build -v -o code-context-generator cmd/cli/main.go
+      run: go build -v -o c-gen cmd/cli/main.go
     
     - name: Test build artifacts
       run: |
-        ./code-context-generator --help
+        ./c-gen --help
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: binaries
         path: |
-          code-context-generator
+          c-gen
 
   release:
     needs: build

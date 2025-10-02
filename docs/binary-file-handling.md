@@ -190,10 +190,10 @@ func (f *MarkdownFormatter) FormatFile(file types.FileInfo) (string, error) {
 
 ```bash
 # 排除二进制文件（默认行为）
-code-context-generator generate --exclude-binary path/to/directory
+c-gen generate --exclude-binary path/to/directory
 
 # 包含二进制文件（不推荐）
-code-context-generator generate --exclude-binary=false path/to/directory
+c-gen generate --exclude-binary=false path/to/directory
 ```
 
 ### 配置文件选项

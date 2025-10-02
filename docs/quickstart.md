@@ -6,42 +6,42 @@
 ```bash
 git clone https://github.com/yourusername/code-context-generator.git
 cd code-context-generator
-go build -o code-context-generator cmd/cli/main.go
+go build -o c-gen cmd/cli/main.go
 ```
 
 ## 基础使用
 
 ### 扫描当前目录
 ```bash
-./code-context-generator generate
+./c-gen generate
 ```
 
 ### 扫描指定目录
 ```bash
-./code-context-generator generate /path/to/your/project
+./c-gen generate /path/to/your/project
 ```
 
 ### 指定输出格式
 ```bash
 # Markdown格式
-./code-context-generator generate -f markdown -o project.md
+./c-gen generate -f markdown -o project.md
 
 # XML格式
-./code-context-generator generate -f xml -o project.xml
+./c-gen generate -f xml -o project.xml
 ```
 
 ### 智能格式覆盖
 ```bash
 # 使用config-json.yaml自动应用JSON格式
-./code-context-generator generate -c config-json.yaml
+./c-gen generate -c config-json.yaml
 
 # 使用config-xml.yaml自动应用XML格式  
-./code-context-generator generate -c config-xml.yaml
+./c-gen generate -c config-xml.yaml
 ```
 
 ### 包含文件内容
 ```bash
-./code-context-generator generate -C -o context.json
+./c-gen generate -C -o context.json
 ```
 
 ## 常用命令
@@ -49,13 +49,13 @@ go build -o code-context-generator cmd/cli/main.go
 ### 文件过滤
 ```bash
 # 排除特定文件
-./code-context-generator generate -e "*.log" -e "node_modules"
+./c-gen generate -e "*.log" -e "node_modules"
 
 # 只包含特定扩展名
-./code-context-generator generate -i "*.go" -i "*.md"
+./c-gen generate -i "*.go" -i "*.md"
 
 # 限制文件大小（10MB）
-./code-context-generator generate -s 10485760
+./c-gen generate -s 10485760
 ```
 
 
@@ -64,7 +64,7 @@ go build -o code-context-generator cmd/cli/main.go
 
 ### 创建默认配置
 ```bash
-./code-context-generator config init
+./c-gen config init
 ```
 
 ### 基础配置示例

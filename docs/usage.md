@@ -22,7 +22,7 @@
 ```bash
 git clone https://github.com/yourusername/code-context-generator.git
 cd code-context-generator
-go build -o code-context-generator cmd/cli/main.go
+go build -o c-gen cmd/cli/main.go
 ```
 
 ## CLI使用指南
@@ -30,31 +30,31 @@ go build -o code-context-generator cmd/cli/main.go
 ### 基本用法
 ```bash
 # 扫描当前目录
-./code-context-generator generate
+./c-gen generate
 
 # 扫描指定目录
-./code-context-generator generate /path/to/project
+./c-gen generate /path/to/project
 
 # 指定输出格式
-./code-context-generator generate -f markdown -o output.md
+./c-gen generate -f markdown -o output.md
 ```
 
 ### 高级用法
 ```bash
 # 包含文件内容
-./code-context-generator generate -C -o context.json
+./c-gen generate -C -o context.json
 
 # 排除特定文件
-./code-context-generator generate -e "*.log" -e "node_modules"
+./c-gen generate -e "*.log" -e "node_modules"
 
 # 只包含特定扩展名
-./code-context-generator generate -i "*.go" -i "*.md"
+./c-gen generate -i "*.go" -i "*.md"
 
 # 限制文件大小（10MB）
-./code-context-generator generate -s 10485760
+./c-gen generate -s 10485760
 
 # 限制扫描深度
-./code-context-generator generate -d 3
+./c-gen generate -d 3
 ```
 
 
@@ -62,14 +62,14 @@ go build -o code-context-generator cmd/cli/main.go
 ### 配置管理
 ```bash
 # 创建默认配置
-./code-context-generator config init
+./c-gen config init
 
 # 使用自定义配置
-./code-context-generator generate -c config.toml
+./c-gen generate -c config.toml
 
 # 使用智能格式覆盖配置
-./code-context-generator generate -c config-json.yaml  # 自动使用JSON格式
-./code-context-generator generate -c config-xml.yaml  # 自动使用XML格式
+./c-gen generate -c config-json.yaml  # 自动使用JSON格式
+./c-gen generate -c config-xml.yaml  # 自动使用XML格式
 ```
 
 ## 配置文件
@@ -141,17 +141,17 @@ include_toc = true
 
 ### 扫描Go项目
 ```bash
-./code-context-generator generate -e "vendor" -f json -o go-project.json
+./c-gen generate -e "vendor" -f json -o go-project.json
 ```
 
 ### 扫描Python项目
 ```bash
-./code-context-generator generate -e "venv" -e "__pycache__" -f markdown -o python-project.md
+./c-gen generate -e "venv" -e "__pycache__" -f markdown -o python-project.md
 ```
 
 ### 生成项目文档
 ```bash
-./code-context-generator generate -C -H -f markdown -o documentation.md
+./c-gen generate -C -H -f markdown -o documentation.md
 ```
 
 ## 故障排除
@@ -160,26 +160,26 @@ include_toc = true
 
 **权限错误**: `permission denied`
 ```bash
-chmod +x code-context-generator  # Linux/macOS
+chmod +x c-gen  # Linux/macOS
 ```
 
 **找不到命令**: `command not found`
 ```bash
-./code-context-generator  # 使用完整路径
+./c-gen  # 使用完整路径
 ```
 
 **输出文件太大**: 
 ```bash
-./code-context-generator generate -s 1048576  # 限制文件大小
+./c-gen generate -s 1048576  # 限制文件大小
 ```
 
 ### 调试模式
 ```bash
-./code-context-generator generate --debug
+./c-gen generate --debug
 ```
 
 ### 获取帮助
 ```bash
-./code-context-generator --help
-./code-context-generator generate --help
+./c-gen --help
+./c-gen generate --help
 ```

@@ -116,22 +116,22 @@ export CODE_CONTEXT_LOG_LEVEL=info
 ### CLI使用示例
 ```bash
 # 扫描当前目录并输出JSON格式
-./code-context-generator generate
+./c-gen generate
 
 # 扫描指定目录并输出Markdown格式
-./code-context-generator generate /path/to/project -f markdown -o project.md
+./c-gen generate /path/to/project -f markdown -o project.md
 
 # 排除特定文件/目录
-./code-context-generator generate -e "*.log" -e "node_modules" -e ".git"
+./c-gen generate -e "*.log" -e "node_modules" -e ".git"
 
 # 包含文件内容和哈希值
-./code-context-generator generate -C -H -f xml -o context.xml
+./c-gen generate -C -H -f xml -o context.xml
 
 # 排除二进制文件（默认行为）
-./code-context-generator generate --exclude-binary
+./c-gen generate --exclude-binary
 
 # 包含二进制文件（不推荐）
-./code-context-generator generate --exclude-binary=false
+./c-gen generate --exclude-binary=false
 ```
 
 
