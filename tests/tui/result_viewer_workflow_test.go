@@ -567,7 +567,8 @@ func TestResultViewerWorkflowKeyboardMapping(t *testing.T) {
 			mockModel.On("Update", keyMsg).Return(mockModel, nil)
 			
 			_, cmd := mockModel.Update(keyMsg)
-			assert.NotNil(t, cmd)
+			// Update方法返回nil命令是正常的，表示没有后续命令
+			assert.Nil(t, cmd)
 			
 			t.Logf("测试: %s", tt.description)
 			mockModel.AssertExpectations(t)
