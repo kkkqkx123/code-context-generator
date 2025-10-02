@@ -18,7 +18,7 @@ func main() {
 	// 手动解析命令行参数
 	var format, outputFile string
 	var showHelp bool
-	
+
 	args := os.Args[1:]
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -79,7 +79,7 @@ func main() {
 
 	// 创建文件选择器
 	fileSelector := selector.NewFileSelector(cm.Get())
-	
+
 	// 选择要打包的文件
 	fmt.Println("请选择要打包的文件和文件夹...")
 	selectOptions := &types.SelectOptions{
@@ -143,19 +143,19 @@ func main() {
 		if info.IsDir() {
 			// 如果是目录，遍历其中的文件
 			walkOptions := &types.WalkOptions{
-				MaxDepth:        3, // 限制子目录深度
+				MaxDepth:        3,       // 限制子目录深度
 				MaxFileSize:     1048576, // 1MB
 				ExcludePatterns: []string{".git", "node_modules", "*.exe", "*.dll"},
 				ExcludeBinary:   false,
 				ShowHidden:      false,
 			}
-			
+
 			contextData, err := walker.Walk(item, walkOptions)
 			if err != nil {
 				log.Printf("警告: 遍历目录 %s 失败: %v", item, err)
 				continue
 			}
-			
+
 			result.Files = append(result.Files, contextData.Files...)
 			result.Folders = append(result.Folders, contextData.Folders...)
 		} else {
@@ -184,7 +184,7 @@ func main() {
 		FolderCount: result.FolderCount,
 		TotalSize:   result.TotalSize,
 		Metadata: map[string]interface{}{
-			"root_path": currentDir,
+			"root_path":    currentDir,
 			"generated_at": "现在",
 		},
 	}
@@ -209,10 +209,10 @@ func main() {
 		// 交互式选择格式
 		fmt.Println("\n选择输出格式:")
 		fmt.Println("1. JSON")
-		fmt.Println("2. XML") 
+		fmt.Println("2. XML")
 		fmt.Println("3. Markdown")
 		fmt.Print("请选择 (1-3): ")
-		
+
 		var choice int
 		fmt.Scanln(&choice)
 
@@ -229,7 +229,7 @@ func main() {
 	}
 
 	// 创建格式化器
-	formatter, err := formatter.NewFormatter(selectedFormat)
+	formatter, err := formatter.NewFormatter(selectedFormat, cm.Get())
 	if err != nil {
 		log.Fatalf("创建格式化器失败: %v", err)
 	}
@@ -246,10 +246,10 @@ func main() {
 		finalOutputFile = outputFile
 	} else {
 		// 生成默认输出文件名
-		finalOutputFile = fmt.Sprintf("context_%s.%s", 
+		finalOutputFile = fmt.Sprintf("context_%s.%s",
 			filepath.Base(currentDir), selectedFormat)
 	}
-	
+
 	// 保存到文件
 	if err := os.WriteFile(finalOutputFile, []byte(outputData), 0644); err != nil {
 		log.Fatalf("写入输出文件失败: %v", err)

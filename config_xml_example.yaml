@@ -1,0 +1,49 @@
+# XML格式配置示例
+format: xml
+output: context.xml
+xml:
+  enabled: true
+  root_tag: "Context"
+  file_tag: "File"
+  folder_tag: "Folder"
+  files_tag: "Files"
+  formatting:
+    indent: "  "
+    declaration: true
+    encoding: "UTF-8"
+    content_handling: "cdata"  # 可选值: escaped (默认), cdata, raw
+  fields:
+    name: "Name"
+    path: "Path"
+    size: "Size"
+    modified: "Modified"
+    content: "Content"
+    is_binary: "IsBinary"
+    language: "Language"
+
+# 文件过滤配置
+filters:
+  max_file_size: "10MB"
+  exclude_patterns:
+    - "*.exe"
+    - "*.dll"
+    - "*.so"
+    - "node_modules/*"
+    - ".git/*"
+    - "*.log"
+  include_patterns: []
+  max_depth: 10
+  follow_symlinks: false
+  exclude_binary: true
+
+# 文件处理配置
+fields:
+  custom_names: {}
+  filter:
+    include: []
+    exclude: []
+  processing:
+    max_length: 0
+    add_line_numbers: false
+    trim_whitespace: false
+    code_highlight: false

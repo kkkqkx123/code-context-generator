@@ -244,7 +244,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// 创建格式化器
-	formatter, err := formatter.NewFormatter(format)
+	formatter, err := formatter.NewFormatter(format, cfg)
 	if err != nil {
 		return fmt.Errorf("创建格式化器失败: %w", err)
 	}
@@ -398,7 +398,7 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	result.FolderCount = len(result.Folders)
 
 	// 创建格式化器
-	formatter, err := formatter.NewFormatter(format)
+	formatter, err := formatter.NewFormatter(format, cfg)
 	if err != nil {
 		return fmt.Errorf("创建格式化器失败: %w", err)
 	}

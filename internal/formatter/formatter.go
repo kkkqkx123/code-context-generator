@@ -9,9 +9,42 @@ import (
 	"strings"
 	"time"
 
+
 	"code-context-generator/pkg/constants"
 	"code-context-generator/pkg/types"
 )
+
+// CDATAText 包装CDATA文本的类型
+type CDATAText struct {
+	Text string `xml:",cdata"`
+}
+
+// RawText 包装原始文本的类型（最小转义）
+type RawText struct {
+	Text string `xml:",innerxml"`
+}
+
+// MarshalXML 自定义CDATA文本的XML序列化
+func (c CDATAText) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	// 直接输出CDATA包装的内容
+	return e.EncodeElement(struct {
+		Text string `xml:",innerxml"`
+	}{Text: "<![CDATA[" + c.Text + "]]>"}, start)
+}
+
+// MarshalXML 自定义原始文本的XML序列化
+func (r RawText) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	// 使用innerxml来避免转义，但需要确保内容是有效的XML
+	// 这里我们只转义最基本的XML字符
+	safeContent := r.Text
+	safeContent = strings.ReplaceAll(safeContent, "&", "&amp;")
+	safeContent = strings.ReplaceAll(safeContent, "<", "&lt;")
+	safeContent = strings.ReplaceAll(safeContent, ">", "&gt;")
+	
+	return e.EncodeElement(struct {
+		Text string `xml:",innerxml"`
+	}{Text: safeContent}, start)
+}
 
 // Formatter 格式转换器接口
 type Formatter interface {
@@ -26,7 +59,7 @@ type Formatter interface {
 type BaseFormatter struct {
 	name        string
 	description string
-	config      *types.FormatConfig
+	config      interface{}
 }
 
 // GetName 获取格式名称
@@ -42,55 +75,220 @@ func (f *BaseFormatter) GetDescription() string {
 // applyCustomStructure 应用自定义结构
 func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{} {
 	// 根据配置应用自定义结构
-	if f.config != nil && f.config.Structure != nil {
-		// 创建基于实际数据的自定义结构
-		result := make(map[string]interface{})
-		
-		// 应用结构映射
-		if rootTag, ok := f.config.Structure["root"].(string); ok && rootTag != "" {
-			result["XMLName"] = xml.Name{Local: rootTag}
-		} else {
-			result["XMLName"] = xml.Name{Local: "context"}
+	if f.config != nil {
+		// 尝试将配置转换为FormatConfig
+		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig.Structure != nil {
+			// 创建基于实际数据的自定义结构
+			result := make(map[string]interface{})
+			
+			// 首先复制所有自定义字段（除了已知的结构字段）
+			for key, value := range formatConfig.Structure {
+				switch key {
+				case "root", "files", "folders":
+					// 这些字段稍后单独处理
+				default:
+					// 复制自定义字段
+					result[key] = value
+				}
+			}
+			
+			// 应用结构映射
+			if rootTag, ok := formatConfig.Structure["root"].(string); ok && rootTag != "" {
+				result["XMLName"] = xml.Name{Local: rootTag}
+			} else {
+				result["XMLName"] = xml.Name{Local: "context"}
+			}
+			
+			// 映射文件和文件夹数据
+			if filesTag, ok := formatConfig.Structure["files"].(string); ok && filesTag != "" {
+				result[filesTag] = map[string]interface{}{
+					"file": data.Files,
+				}
+			} else {
+				result["files"] = map[string]interface{}{
+					"file": data.Files,
+				}
+			}
+			
+			if foldersTag, ok := formatConfig.Structure["folders"].(string); ok && foldersTag != "" {
+				result[foldersTag] = map[string]interface{}{
+					"folder": data.Folders,
+				}
+			} else {
+				result["folders"] = map[string]interface{}{
+					"folder": data.Folders,
+				}
+			}
+			
+			// 添加统计信息
+			result["file_count"] = data.FileCount
+			result["folder_count"] = data.FolderCount
+			result["total_size"] = data.TotalSize
+			
+			return result
 		}
-		
-		// 映射文件和文件夹数据
-		if filesTag, ok := f.config.Structure["files"].(string); ok && filesTag != "" {
-			result[filesTag] = map[string]interface{}{
-				"file": data.Files,
-			}
-		} else {
-			result["files"] = map[string]interface{}{
-				"file": data.Files,
-			}
-		}
-		
-		if foldersTag, ok := f.config.Structure["folders"].(string); ok && foldersTag != "" {
-			result[foldersTag] = map[string]interface{}{
-				"folder": data.Folders,
-			}
-		} else {
-			result["folders"] = map[string]interface{}{
-				"folder": data.Folders,
-			}
-		}
-		
-		// 添加统计信息
-		result["file_count"] = data.FileCount
-		result["folder_count"] = data.FolderCount
-		result["total_size"] = data.TotalSize
-		
-		return result
 	}
 	
-	return data
+	// 返回可序列化的结构，避免map[string]interface{}
+	return struct {
+		Files       []types.FileInfo       `json:"files"`
+		Folders     []types.FolderInfo     `json:"folders"`
+		FileCount   int                    `json:"file_count"`
+		FolderCount int                    `json:"folder_count"`
+		TotalSize   int64                  `json:"total_size"`
+		Metadata    map[string]interface{} `json:"metadata"`
+	}{
+		Files:       data.Files,
+		Folders:     data.Folders,
+		FileCount:   data.FileCount,
+		FolderCount: data.FolderCount,
+		TotalSize:   data.TotalSize,
+		Metadata:    data.Metadata,
+	}
+}
+
+// formatFileWithContentHandling 根据内容处理选项格式化文件
+func formatFileWithContentHandling(file types.FileInfo, contentHandling types.XMLContentHandling) (string, error) {
+	// 如果是二进制文件，不显示内容
+	if file.IsBinary {
+		file.Content = "[二进制文件 - 内容未显示]"
+	}
+	
+	switch contentHandling {
+	case types.XMLContentCDATA:
+		// 使用CDATA包装内容
+		type FileWithCDATA struct {
+			XMLName xml.Name `xml:"file"`
+			Path    string   `xml:"path"`
+			Name    string   `xml:"name"`
+			Size    int64    `xml:"size"`
+			Content string   `xml:",cdata"`
+			ModTime string   `xml:"mod_time"`
+			IsDir   bool     `xml:"is_dir"`
+			IsHidden bool    `xml:"is_hidden"`
+			IsBinary bool    `xml:"is_binary"`
+		}
+		
+		fileWithCDATA := FileWithCDATA{
+			Path:     file.Path,
+			Name:     file.Name,
+			Size:     file.Size,
+			Content:  file.Content,
+			ModTime:  file.ModTime.Format(time.RFC3339),
+			IsDir:    file.IsDir,
+			IsHidden: file.IsHidden,
+			IsBinary: file.IsBinary,
+		}
+		
+		output, err := xml.MarshalIndent(fileWithCDATA, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("XML文件格式化失败: %w", err)
+		}
+		return xml.Header + string(output), nil
+		
+	case types.XMLContentRaw:
+		// 使用最小转义
+		type FileWithRaw struct {
+			XMLName xml.Name `xml:"file"`
+			Path    string   `xml:"path"`
+			Name    string   `xml:"name"`
+			Size    int64    `xml:"size"`
+			Content RawText  `xml:"content"`
+			ModTime string   `xml:"mod_time"`
+			IsDir   bool     `xml:"is_dir"`
+			IsHidden bool    `xml:"is_hidden"`
+			IsBinary bool    `xml:"is_binary"`
+		}
+		
+		fileWithRaw := FileWithRaw{
+			Path:     file.Path,
+			Name:     file.Name,
+			Size:     file.Size,
+			Content:  RawText{Text: file.Content},
+			ModTime:  file.ModTime.Format(time.RFC3339),
+			IsDir:    file.IsDir,
+			IsHidden: file.IsHidden,
+			IsBinary: file.IsBinary,
+		}
+		
+		output, err := xml.MarshalIndent(fileWithRaw, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("XML文件格式化失败: %w", err)
+		}
+		return xml.Header + string(output), nil
+		
+	default:
+		// 默认使用标准XML序列化（转义）
+		output, err := xml.MarshalIndent(file, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("XML文件格式化失败: %w", err)
+		}
+		return xml.Header + string(output), nil
+	}
+}
+
+// formatFolderWithContentHandling 根据内容处理选项格式化文件夹
+func formatFolderWithContentHandling(folder types.FolderInfo, contentHandling types.XMLContentHandling) (string, error) {
+	switch contentHandling {
+	case types.XMLContentCDATA:
+		// 使用CDATA包装内容（主要用于文件内容，文件夹较少使用）
+		// 这里仍然使用标准序列化，因为文件夹主要包含元数据
+		output, err := xml.MarshalIndent(folder, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
+		}
+		return xml.Header + string(output), nil
+		
+	case types.XMLContentRaw:
+		// 使用最小转义
+		type FolderWithRaw struct {
+			XMLName xml.Name   `xml:"folder"`
+			Path    string     `xml:"path"`
+			Name    string     `xml:"name"`
+			Files   []types.FileInfo `xml:"files"`
+			Folders []types.FolderInfo `xml:"folders"`
+			ModTime string     `xml:"mod_time"`
+			IsHidden bool      `xml:"is_hidden"`
+			Size    int64      `xml:"size"`
+			Count   int        `xml:"count"`
+		}
+		
+		folderWithRaw := FolderWithRaw{
+			Path:     folder.Path,
+			Name:     folder.Name,
+			Files:    folder.Files,
+			Folders:  folder.Folders,
+			ModTime:  folder.ModTime.Format(time.RFC3339),
+			IsHidden: folder.IsHidden,
+			Size:     folder.Size,
+			Count:    folder.Count,
+		}
+		
+		output, err := xml.MarshalIndent(folderWithRaw, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
+		}
+		return xml.Header + string(output), nil
+		
+	default:
+		// 默认使用标准XML序列化（转义）
+		output, err := xml.MarshalIndent(folder, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
+		}
+		return xml.Header + string(output), nil
+	}
 }
 
 // applyCustomFields 应用自定义字段映射
 func (f *BaseFormatter) applyCustomFields(file types.FileInfo) interface{} {
 	// 根据配置应用自定义字段映射
-	if f.config != nil && f.config.Fields != nil {
-		// 这里可以实现字段映射逻辑
-		return f.config.Fields
+	if f.config != nil {
+		// 尝试将配置转换为FormatConfig
+		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig.Fields != nil {
+			// 这里可以实现字段映射逻辑
+			return formatConfig.Fields
+		}
 	}
 	return file
 }
@@ -113,18 +311,37 @@ func NewJSONFormatter(config *types.FormatConfig) Formatter {
 
 // Format 格式化上下文数据
 func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
-	if f.config != nil && f.config.Structure != nil {
-		// 使用自定义结构
-		customData := f.applyCustomStructure(data)
-		output, err := json.MarshalIndent(customData, "", "  ")
-		if err != nil {
-			return "", fmt.Errorf("JSON格式化失败: %w", err)
+	// 尝试将配置转换为FormatConfig
+	if f.config != nil {
+		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil && formatConfig.Structure != nil {
+			// 使用自定义结构
+			customData := f.applyCustomStructure(data)
+			output, err := json.MarshalIndent(customData, "", "  ")
+			if err != nil {
+				return "", fmt.Errorf("JSON格式化失败: %w", err)
+			}
+			return string(output), nil
 		}
-		return string(output), nil
 	}
 
-	// 默认结构
-	output, err := json.MarshalIndent(data, "", "  ")
+	// 默认结构 - 创建安全的数据副本避免nil引用
+	safeData := struct {
+		Files       []types.FileInfo   `json:"files"`
+		Folders     []types.FolderInfo `json:"folders"`
+		FileCount   int                `json:"file_count"`
+		FolderCount int                `json:"folder_count"`
+		TotalSize   int64              `json:"total_size"`
+		Metadata    map[string]interface{} `json:"metadata"`
+	}{
+		Files:       data.Files,
+		Folders:     data.Folders,
+		FileCount:   data.FileCount,
+		FolderCount: data.FolderCount,
+		TotalSize:   data.TotalSize,
+		Metadata:    data.Metadata,
+	}
+	
+	output, err := json.MarshalIndent(safeData, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("JSON格式化失败: %w", err)
 	}
@@ -138,14 +355,17 @@ func (f *JSONFormatter) FormatFile(file types.FileInfo) (string, error) {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
 	
-	if f.config != nil && f.config.Fields != nil {
-		// 使用自定义字段映射
-		customFile := f.applyCustomFields(file)
-		output, err := json.MarshalIndent(customFile, "", "  ")
-		if err != nil {
-			return "", fmt.Errorf("JSON文件格式化失败: %w", err)
+	// 尝试将配置转换为FormatConfig
+	if f.config != nil {
+		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil && formatConfig.Fields != nil {
+			// 使用自定义字段映射
+			customFile := f.applyCustomFields(file)
+			output, err := json.MarshalIndent(customFile, "", "  ")
+			if err != nil {
+				return "", fmt.Errorf("JSON文件格式化失败: %w", err)
+			}
+			return string(output), nil
 		}
-		return string(output), nil
 	}
 
 	output, err := json.MarshalIndent(file, "", "  ")
@@ -167,16 +387,22 @@ func (f *JSONFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 // XMLFormatter XML格式转换器
 type XMLFormatter struct {
 	BaseFormatter
+	config *types.Config
 }
 
 // NewXMLFormatter 创建XML格式转换器
-func NewXMLFormatter(config *types.FormatConfig) Formatter {
+func NewXMLFormatter(config *types.Config) Formatter {
+	var formatConfig *types.FormatConfig
+	if config != nil {
+		formatConfig = &config.Formats.XML.FormatConfig
+	}
 	return &XMLFormatter{
 		BaseFormatter: BaseFormatter{
 			name:        "XML",
 			description: "Extensible Markup Language format",
-			config:      config,
+			config:      formatConfig,
 		},
+		config: config,
 	}
 }
 
@@ -200,7 +426,7 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 		TotalSize:   data.TotalSize,
 	}
 
-	if f.config != nil && f.config.Structure != nil {
+	if f.config != nil && f.config.Formats.XML.Structure != nil {
 		// 使用自定义结构
 		customData := f.applyCustomStructure(data)
 		output, err := xml.MarshalIndent(customData, "", "  ")
@@ -225,6 +451,12 @@ func (f *XMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
 	
+	// 根据内容处理选项处理文件内容
+	if f.config != nil && f.config.Formats.XML.Formatting.ContentHandling != "" {
+		return formatFileWithContentHandling(file, f.config.Formats.XML.Formatting.ContentHandling)
+	}
+	
+	// 默认使用标准XML序列化
 	output, err := xml.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("XML文件格式化失败: %w", err)
@@ -234,6 +466,12 @@ func (f *XMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 
 // FormatFolder 格式化文件夹
 func (f *XMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
+	// 如果配置了内容处理选项，使用相应的处理方式
+	if f.config != nil && f.config.Formats.XML.Formatting.ContentHandling != "" {
+		return formatFolderWithContentHandling(folder, f.config.Formats.XML.Formatting.ContentHandling)
+	}
+
+	// 默认使用标准XML序列化
 	output, err := xml.MarshalIndent(folder, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
@@ -478,20 +716,20 @@ func (ff *FormatterFactory) GetSupportedFormats() []string {
 }
 
 // NewFormatter 创建格式转换器
-func NewFormatter(format string) (Formatter, error) {
-	factory := CreateDefaultFactory(nil)
+func NewFormatter(format string, config *types.Config) (Formatter, error) {
+	factory := CreateDefaultFactory(config)
 	return factory.Get(format)
 }
 
 // CreateDefaultFactory 创建默认的格式转换器工厂
-func CreateDefaultFactory(configs map[string]*types.FormatConfig) *FormatterFactory {
+func CreateDefaultFactory(config *types.Config) *FormatterFactory {
 	factory := NewFormatterFactory()
 
 	// 注册所有支持的格式
-	factory.Register(constants.FormatJSON, NewJSONFormatter(configs[constants.FormatJSON]))
-	factory.Register(constants.FormatXML, NewXMLFormatter(configs[constants.FormatXML]))
-	factory.Register(constants.FormatTOML, NewTOMLFormatter(configs[constants.FormatTOML]))
-	factory.Register(constants.FormatMarkdown, NewMarkdownFormatter(configs[constants.FormatMarkdown]))
+	factory.Register(constants.FormatJSON, NewJSONFormatter(&config.Formats.JSON))
+	factory.Register(constants.FormatXML, NewXMLFormatter(config))
+	factory.Register(constants.FormatTOML, NewTOMLFormatter(&config.Formats.TOML))
+	factory.Register(constants.FormatMarkdown, NewMarkdownFormatter(&config.Formats.Markdown))
 
 	return factory
 }

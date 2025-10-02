@@ -13,11 +13,14 @@ import (
 // 测试辅助函数
 func createTestFileInfo() types.FileInfo {
 	return types.FileInfo{
-		Path:    "test/file.go",
-		Name:    "file.go",
-		Size:    1024,
-		ModTime: time.Now(),
-		Content: "package main\n\nfunc main() {\n\tprintln(\"Hello World\")\n}",
+		Path:     "test/file.go",
+		Name:     "file.go",
+		Size:     1024,
+		ModTime:  time.Now(),
+		Content:  "package main\n\nfunc main() {\n\tprintln(\"Hello World\")\n}",
+		IsDir:    false,
+		IsHidden: false,
+		IsBinary: false,
 	}
 }
 
@@ -27,6 +30,9 @@ func createTestFolderInfo() types.FolderInfo {
 		Name:     "folder",
 		ModTime:  time.Now(),
 		Files:    []types.FileInfo{createTestFileInfo()},
+		Folders:  []types.FolderInfo{}, // 初始化为空切片而不是nil
+		Size:     1024, // 设置文件夹大小
+		Count:    1,    // 设置文件计数
 	}
 }
 
@@ -37,6 +43,7 @@ func createTestContextData() types.ContextData {
 		FileCount:   1,
 		FolderCount: 1,
 		TotalSize:   1024,
+		Metadata:    make(map[string]interface{}),
 	}
 }
 
@@ -374,8 +381,18 @@ func TestFormatterFactory(t *testing.T) {
 }
 
 func TestNewFormatter(t *testing.T) {
+	// 创建测试配置
+	testConfig := &types.Config{
+		Formats: types.FormatsConfig{
+			JSON: types.FormatConfig{Enabled: true},
+			XML:  types.XMLFormatConfig{FormatConfig: types.FormatConfig{Enabled: true}},
+			TOML: types.FormatConfig{Enabled: true},
+			Markdown: types.FormatConfig{Enabled: true},
+		},
+	}
+
 	// 测试创建JSON格式
-	formatter, err := NewFormatter("json")
+	formatter, err := NewFormatter("json", testConfig)
 	if err != nil {
 		t.Fatalf("NewFormatter failed: %v", err)
 	}
@@ -384,7 +401,7 @@ func TestNewFormatter(t *testing.T) {
 	}
 
 	// 测试创建XML格式
-	formatter, err = NewFormatter("xml")
+	formatter, err = NewFormatter("xml", testConfig)
 	if err != nil {
 		t.Fatalf("NewFormatter failed: %v", err)
 	}
@@ -393,7 +410,7 @@ func TestNewFormatter(t *testing.T) {
 	}
 
 	// 测试创建TOML格式
-	formatter, err = NewFormatter("toml")
+	formatter, err = NewFormatter("toml", testConfig)
 	if err != nil {
 		t.Fatalf("NewFormatter failed: %v", err)
 	}
@@ -402,7 +419,7 @@ func TestNewFormatter(t *testing.T) {
 	}
 
 	// 测试创建Markdown格式
-	formatter, err = NewFormatter("markdown")
+	formatter, err = NewFormatter("markdown", testConfig)
 	if err != nil {
 		t.Fatalf("NewFormatter failed: %v", err)
 	}
@@ -411,7 +428,7 @@ func TestNewFormatter(t *testing.T) {
 	}
 
 	// 测试不存在的格式
-	_, err = NewFormatter("nonexistent")
+	_, err = NewFormatter("nonexistent", testConfig)
 	if err == nil {
 		t.Error("Expected error for nonexistent format")
 	}
@@ -475,15 +492,20 @@ func TestJSONFormatter_WithCustomFields(t *testing.T) {
 
 // 测试XMLFormatter的自定义配置
 func TestXMLFormatter_WithCustomConfig(t *testing.T) {
-	// XMLFormatter不支持自定义配置中的复杂结构
-	// 所以我们只测试基本的自定义配置，不设置Structure
-	customConfig := &types.FormatConfig{
-		Fields: map[string]string{
-			"version": "1.0",
+	// XMLFormatter现在使用完整的Config结构
+	config := &types.Config{
+		Formats: types.FormatsConfig{
+			XML: types.XMLFormatConfig{
+				FormatConfig: types.FormatConfig{
+					Fields: map[string]string{
+						"version": "1.0",
+					},
+				},
+			},
 		},
 	}
 	
-	formatter := NewXMLFormatter(customConfig)
+	formatter := NewXMLFormatter(config)
 	data := createTestContextData()
 
 	result, err := formatter.Format(data)
@@ -506,13 +528,19 @@ func TestXMLFormatter_WithCustomConfig(t *testing.T) {
 func TestFormatters_ErrorHandling(t *testing.T) {
 	// 测试XMLFormatter处理不可序列化的数据
 	t.Run("XMLFormatter_InvalidCustomConfig", func(t *testing.T) {
-		customConfig := &types.FormatConfig{
-			Structure: map[string]interface{}{
-				"invalid": make(chan int), // channel不能被XML序列化
+		config := &types.Config{
+			Formats: types.FormatsConfig{
+				XML: types.XMLFormatConfig{
+					FormatConfig: types.FormatConfig{
+						Structure: map[string]interface{}{
+							"invalid": make(chan int), // channel不能被XML序列化
+						},
+					},
+				},
 			},
 		}
 		
-		formatter := NewXMLFormatter(customConfig)
+		formatter := NewXMLFormatter(config)
 		data := createTestContextData()
 
 		_, err := formatter.Format(data)
@@ -568,7 +596,14 @@ func TestFormatters_EmptyData(t *testing.T) {
 	}
 
 	// 测试XMLFormatter
-	xmlFormatter := NewXMLFormatter(nil)
+	xmlConfig := &types.Config{
+		Formats: types.FormatsConfig{
+			XML: types.XMLFormatConfig{
+				FormatConfig: types.FormatConfig{},
+			},
+		},
+	}
+	xmlFormatter := NewXMLFormatter(xmlConfig)
 	result, err = xmlFormatter.Format(emptyData)
 	if err != nil {
 		t.Fatalf("XML format empty data failed: %v", err)
@@ -602,7 +637,15 @@ func TestFormatters_EmptyData(t *testing.T) {
 
 // 测试FormatterFactory的大小写不敏感
 func TestFormatterFactory_CaseInsensitive(t *testing.T) {
-	factory := CreateDefaultFactory(nil)
+	config := &types.Config{
+		Formats: types.FormatsConfig{
+			JSON: types.FormatConfig{},
+			XML:  types.XMLFormatConfig{FormatConfig: types.FormatConfig{}},
+			TOML: types.FormatConfig{},
+			Markdown: types.FormatConfig{},
+		},
+	}
+	factory := CreateDefaultFactory(config)
 
 	// 测试各种大小写变体
 	testCases := []string{"json", "JSON", "Json", "jSoN"}

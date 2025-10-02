@@ -591,22 +591,24 @@ func GetDefaultConfig() *types.Config {
 		},
 		Formats: types.FormatsConfig{
 			XML: types.XMLFormatConfig{
-			Enabled: true,
-			RootTag: "context",
-			FileTag: "file",
-			FilesTag: "files",
-			FolderTag: "folder",
-			Fields: map[string]string{
-				"path":     "path",
-				"content":  "content",
-				"filename": "filename",
+				FormatConfig: types.FormatConfig{
+					Enabled: true,
+					Fields: map[string]string{
+						"path":     "path",
+						"content":  "content",
+						"filename": "filename",
+					},
+				},
+				RootTag: "context",
+				FileTag: "file",
+				FilesTag: "files",
+				FolderTag: "folder",
+				Formatting: types.XMLFormattingConfig{
+					Indent:      "  ",
+					Declaration: true,
+					Encoding:    "UTF-8",
+				},
 			},
-			Formatting: types.XMLFormattingConfig{
-				Indent:      "  ",
-				Declaration: true,
-				Encoding:    "UTF-8",
-			},
-		},
 			JSON: types.FormatConfig{
 				Enabled: true,
 				Structure: map[string]interface{}{

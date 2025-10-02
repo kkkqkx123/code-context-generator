@@ -82,22 +82,33 @@ type FormatConfig struct {
 
 // XMLFormatConfig XML格式专用配置
 type XMLFormatConfig struct {
-	Enabled    bool              `yaml:"enabled" json:"enabled" toml:"enabled"`
-	RootTag    string            `yaml:"root_tag" json:"root_tag" toml:"root_tag"`
-	FileTag    string            `yaml:"file_tag" json:"file_tag" toml:"file_tag"`
-	FolderTag  string            `yaml:"folder_tag" json:"folder_tag" toml:"folder_tag"`
-	FilesTag   string            `yaml:"files_tag" json:"files_tag" toml:"files_tag"`
-	Fields     map[string]string   `yaml:"fields" json:"fields" toml:"fields"`
-	Template   string            `yaml:"template" json:"template" toml:"template"`
-	Formatting XMLFormattingConfig `yaml:"formatting" json:"formatting" toml:"formatting"`
+	FormatConfig `yaml:",inline" json:",inline" toml:",inline"`
+	RootTag      string            `yaml:"root_tag" json:"root_tag" toml:"root_tag"`
+	FileTag      string            `yaml:"file_tag" json:"file_tag" toml:"file_tag"`
+	FolderTag    string            `yaml:"folder_tag" json:"folder_tag" toml:"folder_tag"`
+	FilesTag     string            `yaml:"files_tag" json:"files_tag" toml:"files_tag"`
+	Formatting   XMLFormattingConfig `yaml:"formatting" json:"formatting" toml:"formatting"`
 }
 
 // XMLFormattingConfig XML格式化配置
 type XMLFormattingConfig struct {
-	Indent      string `yaml:"indent" json:"indent" toml:"indent"`
-	Declaration bool   `yaml:"declaration" json:"declaration" toml:"declaration"`
-	Encoding    string `yaml:"encoding" json:"encoding" toml:"encoding"`
+	Indent      string           `yaml:"indent" json:"indent" toml:"indent"`
+	Declaration bool             `yaml:"declaration" json:"declaration" toml:"declaration"`
+	Encoding    string           `yaml:"encoding" json:"encoding" toml:"encoding"`
+	ContentHandling XMLContentHandling `yaml:"content_handling" json:"content_handling" toml:"content_handling"`
 }
+
+// XMLContentHandling XML内容处理方式
+type XMLContentHandling string
+
+const (
+	// XMLContentEscaped 使用XML实体转义（默认）
+	XMLContentEscaped XMLContentHandling = "escaped"
+	// XMLContentCDATA 使用CDATA包装
+	XMLContentCDATA XMLContentHandling = "cdata"
+	// XMLContentRaw 保留原始格式（最小转义）
+	XMLContentRaw XMLContentHandling = "raw"
+)
 
 // FieldsConfig 字段配置
 type FieldsConfig struct {
