@@ -740,7 +740,7 @@ func TestFileSystemWalker_shouldIncludeFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := walker.shouldIncludeFile(tempFile.Name(), tt.options)
+			result := walker.shouldIncludeFile(tempFile.Name(), "", tt.options)
 			if result != tt.expected {
 				t.Errorf("shouldIncludeFile() = %v, want %v", result, tt.expected)
 			}

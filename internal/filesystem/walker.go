@@ -89,11 +89,11 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 		// 处理文件
 		if !info.IsDir() {
 			wg.Add(1)
-			go func(filePath string) {
+			go func(filePath string, rootPath string) {
 				defer wg.Done()
 
 				// 应用过滤器
-				if !w.shouldIncludeFile(filePath, options) {
+				if !w.shouldIncludeFile(filePath, rootPath, options) {
 					return
 				}
 
@@ -111,7 +111,7 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 				contextData.FileCount++
 				contextData.TotalSize += fileInfo.Size
 				mu.Unlock()
-			}(path)
+			}(path, rootPath)
 		} else {
 			// 处理文件夹
 			if path != rootPath { // 跳过根路径
@@ -151,7 +151,7 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 }
 
 // shouldIncludeFile 检查是否应该包含文件
-func (w *FileSystemWalker) shouldIncludeFile(path string, options *types.WalkOptions) bool {
+func (w *FileSystemWalker) shouldIncludeFile(path string, rootPath string, options *types.WalkOptions) bool {
 	// 检查文件大小
 	if !w.FilterBySize(path, options.MaxFileSize) {
 		return false
@@ -171,6 +171,16 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, options *types.WalkOpt
 				matched = true
 				break
 			}
+			// 尝试匹配相对路径（用于目录模式如 *.go）
+			if strings.Contains(pattern, "/") {
+				rel, _ := filepath.Rel(rootPath, path)
+				// 将Windows路径分隔符转换为正斜杠以匹配模式
+				rel = filepath.ToSlash(rel)
+				if matchedPattern, _ := filepath.Match(pattern, rel); matchedPattern {
+					matched = true
+					break
+				}
+			}
 		}
 		if !matched {
 			return false
@@ -181,8 +191,37 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, options *types.WalkOpt
 	if len(options.ExcludePatterns) > 0 {
 		filename := filepath.Base(path)
 		for _, pattern := range options.ExcludePatterns {
+			// 尝试匹配文件名
 			if matchedPattern, _ := filepath.Match(pattern, filename); matchedPattern {
 				return false
+			}
+			// 尝试匹配相对路径（用于目录模式如 .git/）
+			if strings.Contains(pattern, "/") {
+				rel, _ := filepath.Rel(rootPath, path)
+				// 将Windows路径分隔符转换为正斜杠以匹配模式
+				rel = filepath.ToSlash(rel)
+
+				if matchedPattern, _ := filepath.Match(pattern, rel); matchedPattern {
+					return false
+				}
+				// 对于目录模式（以/结尾），检查文件是否在匹配目录下
+				if strings.HasSuffix(pattern, "/") {
+					dirPattern := strings.TrimSuffix(pattern, "/")
+					// 检查相对路径是否以目录模式开头
+					if strings.HasPrefix(rel, dirPattern+"/") {
+						return false
+					}
+					// 检查路径中的任何目录部分是否匹配
+					pathDirs := strings.Split(rel, "/")
+					for i, dir := range pathDirs {
+						if matchedDir, _ := filepath.Match(dirPattern, dir); matchedDir {
+							// 确保这是完整目录名匹配，而不是部分匹配
+							if i < len(pathDirs)-1 || rel == dirPattern {
+								return false
+							}
+						}
+					}
+				}
 			}
 		}
 	}

@@ -12,7 +12,7 @@ import (
 // TestFileUtils 文件工具函数测试
 func TestFileExists(t *testing.T) {
 	// 测试存在的文件
-	if !FileExists("utils.go") {
+	if !FileExists("utils_test.go") {
 		t.Error("FileExists 应该返回 true 对于存在的文件")
 	}
 

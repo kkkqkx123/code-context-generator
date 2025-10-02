@@ -179,6 +179,30 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	hash, _ := cmd.Flags().GetBool("hash")
 	excludeBinary, _ := cmd.Flags().GetBool("exclude-binary")
 
+	// 合并配置文件设置（命令行参数优先）
+	if len(exclude) == 0 && len(cfg.Filters.ExcludePatterns) > 0 {
+		exclude = cfg.Filters.ExcludePatterns
+	}
+	if len(include) == 0 && len(cfg.Filters.IncludePatterns) > 0 {
+		include = cfg.Filters.IncludePatterns
+	}
+	if maxDepth == 0 && cfg.Filters.MaxDepth > 0 {
+		maxDepth = cfg.Filters.MaxDepth
+	}
+	if maxSize == 0 && cfg.Filters.MaxFileSize != "" {
+		// 解析配置文件中的文件大小字符串
+		parsedSize := env.ParseFileSize(cfg.Filters.MaxFileSize)
+		if parsedSize > 0 {
+			maxSize = int(parsedSize)
+		}
+	}
+	if !hidden && cfg.FileProcessing.IncludeHidden {
+		hidden = cfg.FileProcessing.IncludeHidden
+	}
+	if !excludeBinary && cfg.Filters.ExcludeBinary {
+		excludeBinary = cfg.Filters.ExcludeBinary
+	}
+
 	// 验证格式
 	if !isValidFormat(format) {
 		return fmt.Errorf("无效的输出格式: %s", format)
@@ -195,6 +219,8 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	// 执行遍历
 	if verbose {
 		fmt.Printf("正在扫描路径: %s (递归: %v)\n", path, recursive)
+		fmt.Printf("排除模式: %v\n", exclude)
+		fmt.Printf("最大深度: %d, 最大文件大小: %d\n", maxDepth, maxSize)
 	}
 
 	// 创建遍历选项
