@@ -15,6 +15,50 @@ import (
 )
 
 func main() {
+	// 手动解析命令行参数
+	var format, outputFile string
+	var showHelp bool
+	
+	args := os.Args[1:]
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch arg {
+		case "-f", "--format":
+			if i+1 < len(args) {
+				format = args[i+1]
+				i++
+			}
+		case "-o", "--output":
+			if i+1 < len(args) {
+				outputFile = args[i+1]
+				i++
+			}
+		case "-h", "--help":
+			showHelp = true
+		case "generate":
+			// 忽略generate参数，兼容用户的命令格式
+		}
+	}
+
+	// 显示帮助信息
+	if showHelp {
+		fmt.Println("=== 代码上下文生成器 ===")
+		fmt.Println("使用方式: go run main.go [generate] [选项]")
+		fmt.Println()
+		fmt.Println("选项:")
+		fmt.Println("  -f string    输出格式 (json, xml, markdown)")
+		fmt.Println("  -o string    输出文件路径")
+		fmt.Println("  -h           显示帮助信息")
+		fmt.Println()
+		fmt.Println("示例:")
+		fmt.Println("  go run main.go -f markdown -o output.md")
+		fmt.Println("  go run main.go generate -f markdown -o output.md")
+		fmt.Println("  go run main.go -f json")
+		fmt.Println()
+		fmt.Println("如果不指定格式，将使用交互式选择")
+		return
+	}
+
 	// 首先加载.env文件（如果存在）
 	if err := env.LoadEnv(""); err != nil {
 		log.Printf("警告: 加载.env文件失败: %v", err)
@@ -145,30 +189,47 @@ func main() {
 		},
 	}
 
-	// 选择输出格式
-	fmt.Println("\n选择输出格式:")
-	fmt.Println("1. JSON")
-	fmt.Println("2. XML") 
-	fmt.Println("3. Markdown")
-	fmt.Print("请选择 (1-3): ")
-	
-	var choice int
-	fmt.Scanln(&choice)
+	// 确定输出格式
+	var selectedFormat string
+	if format != "" {
+		// 使用命令行指定的格式
+		selectedFormat = format
+		// 验证格式是否有效
+		validFormats := map[string]bool{
+			"json": true, "xml": true, "markdown": true, "md": true,
+		}
+		if !validFormats[selectedFormat] {
+			log.Fatalf("无效的输出格式: %s，支持的格式: json, xml, markdown", selectedFormat)
+		}
+		if selectedFormat == "md" {
+			selectedFormat = "markdown" // 统一处理
+		}
+		fmt.Printf("使用指定的输出格式: %s\n", selectedFormat)
+	} else {
+		// 交互式选择格式
+		fmt.Println("\n选择输出格式:")
+		fmt.Println("1. JSON")
+		fmt.Println("2. XML") 
+		fmt.Println("3. Markdown")
+		fmt.Print("请选择 (1-3): ")
+		
+		var choice int
+		fmt.Scanln(&choice)
 
-	var format string
-	switch choice {
-	case 1:
-		format = "json"
-	case 2:
-		format = "xml"
-	case 3:
-		format = "markdown"
-	default:
-		format = "json"
+		switch choice {
+		case 1:
+			selectedFormat = "json"
+		case 2:
+			selectedFormat = "xml"
+		case 3:
+			selectedFormat = "markdown"
+		default:
+			selectedFormat = "json"
+		}
 	}
 
 	// 创建格式化器
-	formatter, err := formatter.NewFormatter(format)
+	formatter, err := formatter.NewFormatter(selectedFormat)
 	if err != nil {
 		log.Fatalf("创建格式化器失败: %v", err)
 	}
@@ -179,16 +240,22 @@ func main() {
 		log.Fatalf("格式化输出失败: %v", err)
 	}
 
-	// 生成输出文件名
-	outputFile := fmt.Sprintf("context_%s.%s", 
-		filepath.Base(currentDir), format)
+	// 确定输出文件路径
+	var finalOutputFile string
+	if outputFile != "" {
+		finalOutputFile = outputFile
+	} else {
+		// 生成默认输出文件名
+		finalOutputFile = fmt.Sprintf("context_%s.%s", 
+			filepath.Base(currentDir), selectedFormat)
+	}
 	
 	// 保存到文件
-	if err := os.WriteFile(outputFile, []byte(outputData), 0644); err != nil {
+	if err := os.WriteFile(finalOutputFile, []byte(outputData), 0644); err != nil {
 		log.Fatalf("写入输出文件失败: %v", err)
 	}
 
-	fmt.Printf("\n✅ 成功生成代码上下文文件: %s\n", outputFile)
+	fmt.Printf("\n✅ 成功生成代码上下文文件: %s\n", finalOutputFile)
 	fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", result.FileCount, result.FolderCount)
 	fmt.Printf("💾 总大小: %.2f MB\n", float64(result.TotalSize)/(1024*1024))
 }

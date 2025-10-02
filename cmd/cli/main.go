@@ -253,14 +253,17 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// 输出结果
 	if output != "" {
-		if err := os.WriteFile(output, []byte(outputData), 0644); err != nil {
+		// 标准化换行符为当前操作系统格式
+		normalizedData := utils.NormalizeLineEndings(outputData)
+		if err := os.WriteFile(output, []byte(normalizedData), 0644); err != nil {
 			return fmt.Errorf("写入输出文件失败: %w", err)
 		}
 		if verbose {
 			fmt.Println(utils.SuccessColor("输出已写入:"), output)
 		}
 	} else {
-		fmt.Println(outputData)
+		// 控制台输出也标准化换行符
+		fmt.Println(utils.NormalizeLineEndings(outputData))
 	}
 
 	return nil
@@ -406,14 +409,17 @@ func runSelect(cmd *cobra.Command, args []string) error {
 
 	// 输出结果
 	if output != "" {
-		if err := os.WriteFile(output, []byte(outputData), 0644); err != nil {
+		// 标准化换行符为当前操作系统格式
+		normalizedData := utils.NormalizeLineEndings(outputData)
+		if err := os.WriteFile(output, []byte(normalizedData), 0644); err != nil {
 			return fmt.Errorf("写入输出文件失败: %w", err)
 		}
 		if verbose {
 			fmt.Println(utils.SuccessColor("输出已写入:"), output)
 		}
 	} else {
-		fmt.Println(outputData)
+		// 控制台输出也标准化换行符
+		fmt.Println(utils.NormalizeLineEndings(outputData))
 	}
 
 	return nil
