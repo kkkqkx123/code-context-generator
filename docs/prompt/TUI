@@ -1,0 +1,1 @@
+go run test_enter_key.go时enter能正常生效，但go run cmd/tui/main.go时文件选择器中enter无效

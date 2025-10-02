@@ -42,6 +42,15 @@ func (m *ProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ProgressMsg:
 		m.progress = msg.Progress
 		m.status = msg.Status
+	case ProcessingUpdateMsg:
+		// 根据处理进度更新进度条
+		if msg.TotalFiles > 0 {
+			m.progress = float64(msg.FilesProcessed) / float64(msg.TotalFiles)
+		}
+		m.status = fmt.Sprintf("%s (%d/%d)", msg.Status, msg.FilesProcessed, msg.TotalFiles)
+		if msg.CurrentFile != "" {
+			m.status = fmt.Sprintf("%s - %s", m.status, msg.CurrentFile)
+		}
 	}
 	return m, nil
 }

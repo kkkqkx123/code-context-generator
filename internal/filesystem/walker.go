@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/constants"
@@ -16,6 +17,7 @@ import (
 // Walker 文件系统遍历器接口
 type Walker interface {
 	Walk(rootPath string, options *types.WalkOptions) (*types.ContextData, error)
+	WalkWithProgress(rootPath string, options *types.WalkOptions, progressCallback func(processed, total int, currentFile string)) (*types.ContextData, error)
 	GetFileInfo(path string) (*types.FileInfo, error)
 	GetFolderInfo(path string) (*types.FolderInfo, error)
 	FilterFiles(files []string, patterns []string) []string
@@ -24,12 +26,21 @@ type Walker interface {
 
 // FileSystemWalker 文件系统遍历器实现
 type FileSystemWalker struct {
-	mu sync.RWMutex
+	mu           sync.RWMutex
+	maxWorkers   int
+	maxFileCount int
+	maxDepth     int
+	timeout      time.Duration
 }
 
-// NewWalker 创建新的文件系统遍历器
+// NewWalker 创建遍历器
 func NewWalker() Walker {
-	return &FileSystemWalker{}
+	return &FileSystemWalker{
+		maxWorkers:   10,              // 限制并发worker数量
+		maxFileCount: 10000,           // 限制最大文件数量
+		maxDepth:     20,              // 限制最大深度
+		timeout:      30 * time.Second, // 30秒超时
+	}
 }
 
 // NewFileSystemWalker 创建新的文件系统遍历器（别名）
@@ -39,6 +50,11 @@ func NewFileSystemWalker(options types.WalkOptions) Walker {
 
 // Walk 遍历文件系统
 func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*types.ContextData, error) {
+	return w.WalkWithProgress(rootPath, options, nil)
+}
+
+// WalkWithProgress 带进度回调的遍历文件系统
+func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.WalkOptions, progressCallback func(processed, total int, currentFile string)) (*types.ContextData, error) {
 	if options == nil {
 		options = &types.WalkOptions{
 			MaxDepth:        constants.DefaultMaxDepth,
@@ -64,6 +80,27 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 	contextData.Folders = []types.FolderInfo{}
 	contextData.Metadata = make(map[string]interface{})
 
+	// 首先统计总文件数
+	totalFiles := 0
+	processedFiles := 0
+	filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if w.shouldIncludeFile(path, rootPath, options) {
+			totalFiles++
+		}
+		return nil
+	})
+
+	// 限制文件数量
+	if totalFiles > w.maxFileCount {
+		return nil, fmt.Errorf("文件数量超过限制: %d > %d", totalFiles, w.maxFileCount)
+	}
+
+	semaphore := make(chan struct{}, w.maxWorkers) // 限制并发数量
+	progressMu := sync.Mutex{} // 保护进度更新
+
 	// 遍历文件系统
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -87,15 +124,14 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 		}
 
 		// 处理文件
-		if !info.IsDir() {
+		if !info.IsDir() && w.shouldIncludeFile(path, rootPath, options) {
+			semaphore <- struct{}{} // 获取信号量
 			wg.Add(1)
 			go func(filePath string, rootPath string) {
-				defer wg.Done()
-
-				// 应用过滤器
-				if !w.shouldIncludeFile(filePath, rootPath, options) {
-					return
-				}
+				defer func() {
+					<-semaphore // 释放信号量
+					wg.Done()
+				}()
 
 				// 获取文件信息
 				fileInfo, err := w.GetFileInfo(filePath)
@@ -111,8 +147,18 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 				contextData.FileCount++
 				contextData.TotalSize += fileInfo.Size
 				mu.Unlock()
+
+				// 更新进度
+				progressMu.Lock()
+				processedFiles++
+				currentProcessed := processedFiles
+				progressMu.Unlock()
+				
+				if progressCallback != nil && currentProcessed%10 == 0 { // 每10个文件更新一次进度
+					progressCallback(currentProcessed, totalFiles, filepath.Base(filePath))
+				}
 			}(path, rootPath)
-		} else {
+		} else if info.IsDir() {
 			// 处理文件夹
 			if path != rootPath { // 跳过根路径
 				folderInfo, err := w.GetFolderInfo(path)
@@ -135,6 +181,11 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 
 	wg.Wait()
 
+	// 最终进度更新
+	if progressCallback != nil {
+		progressCallback(totalFiles, totalFiles, "完成")
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("遍历文件系统失败: %w", err)
 	}
@@ -152,6 +203,26 @@ func (w *FileSystemWalker) Walk(rootPath string, options *types.WalkOptions) (*t
 
 // shouldIncludeFile 检查是否应该包含文件
 func (w *FileSystemWalker) shouldIncludeFile(path string, rootPath string, options *types.WalkOptions) bool {
+	// 如果指定了选中的文件，只包含这些文件
+	if len(options.SelectedFiles) > 0 {
+		// 将路径转换为绝对路径进行比较
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return false
+		}
+		
+		for _, selectedFile := range options.SelectedFiles {
+			absSelectedFile, err := filepath.Abs(selectedFile)
+			if err != nil {
+				continue
+			}
+			if absPath == absSelectedFile {
+				return true
+			}
+		}
+		return false
+	}
+
 	// 检查文件大小
 	if !w.FilterBySize(path, options.MaxFileSize) {
 		return false

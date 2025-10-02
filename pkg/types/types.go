@@ -204,6 +204,7 @@ type WalkOptions struct {
 	FollowSymlinks  bool
 	ShowHidden      bool
 	ExcludeBinary   bool
+	SelectedFiles   []string // 选中的具体文件路径，如果为空则使用模式匹配
 }
 
 // FileProcessingConfig 文件处理配置

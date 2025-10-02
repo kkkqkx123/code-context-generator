@@ -2,19 +2,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"code-context-generator/cmd/tui/models"
-	"code-context-generator/internal/config"
-	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/pkg/types"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+// 全局变量用于在回调中访问当前程序
+var currentProgram *tea.Program
+
+// 全局变量用于在回调中访问当前模型
+var currentModel tea.Model
 
 var (
 	cfg        *types.Config
@@ -72,32 +77,24 @@ type MainModel struct {
 
 // 初始化函数
 func init() {
-	// 首先加载.env文件（如果存在）
-	if err := env.LoadEnv(""); err != nil {
-		fmt.Printf("警告: 加载.env文件失败: %v\n", err)
-	}
-
-	// 初始化配置管理器
-	configManager := config.NewManager()
-	
-	// 尝试加载配置文件，如果不存在则使用默认配置，不再自动创建
-	configManager.Load("config.yaml") // 忽略错误，使用默认配置
-	
-	cfg = configManager.Get()
-	models.SetConfig(cfg)
+	// 初始化模型
+	models.SetConfig(nil)
 }
 
 // main 主函数
 func main() {
-	// 初始化模型
-	m := initialModel()
+	// 创建模型
+	model := initialModel()
 
-	// 创建tea程序
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	// 创建程序
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	
+	// 设置全局程序引用
+	currentProgram = p
 
 	// 运行程序
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error running program: %v", err)
+		fmt.Printf("运行程序失败: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -124,7 +121,7 @@ func initialModel() MainModel {
 		fileSelector:     models.NewFileSelectorModel("."),
 		progressBar:      models.NewProgressModel(),
 		resultViewer:     models.NewResultViewerModel(),
-		configEditor:     models.NewConfigEditorModel(cfg),
+		configEditor:     models.NewConfigEditorModel(nil),
 		autocomplete:     models.NewAutocompleteModel(),
 		showAutocomplete: false,
 	}
@@ -140,6 +137,13 @@ func (m MainModel) Init() tea.Cmd {
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.state == StateProcessing {
+			// 处理中状态只响应 Ctrl+C
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
+			return m, nil
+		}
 		return m.handleKeyMsg(msg)
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -167,7 +171,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = StateError
 		return m, nil
 	case *models.FileSelectionMsg:
-		m.options.IncludePatterns = msg.Selected
+		m.options.SelectedFiles = msg.Selected
 		m.state = StateInput
 		m.currentView = ViewMain
 		return m, nil
@@ -489,6 +493,7 @@ func (m MainModel) handleInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m MainModel) startProcessing() (tea.Model, tea.Cmd) {
 	m.state = StateProcessing
 	m.currentView = ViewProgress
+	currentModel = m // 设置全局模型引用
 
 	return m, tea.Batch(
 		tea.Tick(0, func(time.Time) tea.Msg {
@@ -501,10 +506,7 @@ func (m MainModel) startProcessing() (tea.Model, tea.Cmd) {
 // processFiles 处理文件
 func (m MainModel) processFiles() tea.Cmd {
 	return func() tea.Msg {
-		// 创建文件系统遍历器
 		walker := filesystem.NewWalker()
-		
-		// 设置遍历选项
 		options := &types.WalkOptions{
 			MaxDepth:        m.options.MaxDepth,
 			MaxFileSize:     m.options.MaxFileSize,
@@ -512,29 +514,62 @@ func (m MainModel) processFiles() tea.Cmd {
 			IncludePatterns: m.options.IncludePatterns,
 			FollowSymlinks:  m.options.FollowSymlinks,
 			ShowHidden:      m.options.ShowHidden,
+			ExcludeBinary:   true,
+			SelectedFiles:   m.options.SelectedFiles,
 		}
+
+		// 创建上下文用于控制进度更新
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// 启动进度更新goroutine
+		go func() {
+			ticker := time.NewTicker(100 * time.Millisecond)
+			defer ticker.Stop()
+			
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					// 进度将在回调中更新
+				}
+			}
+		}()
+
+		// 使用进度回调进行文件处理
+		var result *types.ContextData
+		var err error
 		
-		// 执行文件遍历
-		contextData, err := walker.Walk(m.pathInput, options)
+		result, err = walker.WalkWithProgress(m.pathInput, options, func(p, t int, file string) {
+			// 更新进度信息
+			if currentProgram != nil && t > 0 {
+				progress := float64(p) / float64(t)
+				currentProgram.Send(models.ProgressMsg{
+					Progress: progress,
+					Status:   fmt.Sprintf("扫描文件中... %d/%d", p, t),
+				})
+			}
+		})
+		
+		// 取消进度更新goroutine
+		cancel()
+		
 		if err != nil {
-			return models.ErrorMsg{Err: fmt.Errorf("文件遍历失败: %w", err)}
+			return models.ErrorMsg{Err: err}
+		}
+
+		// 转换结果类型
+		walkResult := &types.WalkResult{
+			Files:       result.Files,
+			Folders:     result.Folders,
+			FileCount:   result.FileCount,
+			FolderCount: result.FolderCount,
+			TotalSize:   result.TotalSize,
+			RootPath:    m.pathInput,
 		}
 		
-		// 转换为WalkResult格式
-		result := &types.WalkResult{
-			Files:       contextData.Files,
-			Folders:     contextData.Folders,
-			FileCount:   len(contextData.Files),
-			FolderCount: len(contextData.Folders),
-			TotalSize:   0, // 将在下面计算
-		}
-		
-		// 计算总大小
-		for _, file := range contextData.Files {
-			result.TotalSize += file.Size
-		}
-		
-		return models.ResultMsg{Result: result}
+		return models.ResultMsg{Result: walkResult}
 	}
 }
 

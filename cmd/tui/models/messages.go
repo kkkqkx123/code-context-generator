@@ -11,6 +11,14 @@ type ProgressMsg struct {
 	Status   string
 }
 
+// ProcessingUpdateMsg 处理更新消息
+type ProcessingUpdateMsg struct {
+	FilesProcessed   int
+	TotalFiles       int
+	CurrentFile      string
+	Status          string
+}
+
 // ResultMsg 结果消息
 type ResultMsg struct {
 	Result *types.WalkResult

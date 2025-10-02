@@ -53,7 +53,7 @@ func (m *FileSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			return m, func() tea.Msg {
-				return FileSelectionMsg{Selected: []string{}}
+				return &FileSelectionMsg{Selected: []string{}}
 			}
 		case "enter":
 			return m, m.confirmSelection()
@@ -298,11 +298,8 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 				showHidden = config.FileProcessing.IncludeHidden
 			}
 			
-			fmt.Printf("调试: 开始加载路径: %s，显示隐藏文件: %v\n", m.path, showHidden)
-			
 			// 检查路径是否存在
 			if _, err := os.Stat(m.path); err != nil {
-				fmt.Printf("错误: 路径不存在: %s，错误: %v\n", m.path, err)
 				resultChan <- result{items: []selector.FileItem{}, err: fmt.Errorf("路径不存在: %s，错误: %v", m.path, err)}
 				return
 			}
@@ -310,12 +307,9 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 			// 获取目录内容
 			contents, err := selector.GetDirectoryContents(m.path, showHidden)
 			if err != nil {
-				fmt.Printf("错误: 获取目录内容失败: %s，错误: %v\n", m.path, err)
 				resultChan <- result{items: []selector.FileItem{}, err: err}
 				return
 			}
-			
-			fmt.Printf("调试: 获取到 %d 个原始文件项\n", len(contents))
 			
 			// 将FileInfo转换为FileItem
 			items := make([]selector.FileItem, 0, len(contents))
@@ -334,9 +328,6 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 				items = append(items, item)
 			}
 			
-			// 调试信息：记录加载的文件数量
-			fmt.Printf("调试: 成功加载了 %d 个文件，显示隐藏文件: %v\n", len(items), showHidden)
-			
 			resultChan <- result{items: items, err: nil}
 		}()
 		
@@ -344,7 +335,6 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 		select {
 		case res := <-resultChan:
 			if res.err != nil {
-				fmt.Printf("错误: 文件加载失败: %v\n", res.err)
 				return FileListMsg{Items: []selector.FileItem{}}
 			}
 			
@@ -358,11 +348,9 @@ func (m *FileSelectorModel) loadFiles() tea.Cmd {
 				return items[i].Name < items[j].Name
 			})
 			
-			fmt.Printf("调试: 最终返回 %d 个排序后的文件项\n", len(items))
 			return FileListMsg{Items: items}
 		case <-ctx.Done():
 			// 超时，返回空列表
-			fmt.Printf("错误: 文件加载超时\n")
 			return FileListMsg{Items: []selector.FileItem{}}
 		}
 	}
@@ -376,7 +364,7 @@ func (m *FileSelectorModel) confirmSelection() tea.Cmd {
 				selected = append(selected, item.Path)
 			}
 		}
-		return FileSelectionMsg{Selected: selected}
+		return &FileSelectionMsg{Selected: selected}
 	}
 }
 
