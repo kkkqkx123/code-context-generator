@@ -65,6 +65,9 @@ type MainModel struct {
 	progressBar  *models.ProgressModel
 	resultViewer *models.ResultViewerModel
 	configEditor *models.ConfigEditorModel
+	// 自动补全
+	autocomplete    *models.AutocompleteModel
+	showAutocomplete bool
 }
 
 // 初始化函数
@@ -117,11 +120,13 @@ func initialModel() MainModel {
 			FollowSymlinks:  false,
 			ShowHidden:      false,
 		},
-	// 创建初始模型
-	fileSelector: models.NewFileSelectorModel("."),
-	progressBar:  models.NewProgressModel(),
-	resultViewer: models.NewResultViewerModel(),
-	configEditor: models.NewConfigEditorModel(cfg),
+		// 创建初始模型
+		fileSelector:     models.NewFileSelectorModel("."),
+		progressBar:      models.NewProgressModel(),
+		resultViewer:     models.NewResultViewerModel(),
+		configEditor:     models.NewConfigEditorModel(cfg),
+		autocomplete:     models.NewAutocompleteModel(),
+		showAutocomplete: false,
 	}
 }
 
@@ -139,6 +144,9 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		if m.autocomplete != nil {
+			m.autocomplete.SetSize(msg.Width, msg.Height)
+		}
 		return m, nil
 	case *models.ProgressMsg:
 		if m.progressBar != nil {
@@ -167,6 +175,21 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cfg = msg.Config
 		m.state = StateInput
 		m.currentView = ViewMain
+		return m, nil
+	case *models.UpdateSuggestionsMsg:
+		if m.autocomplete != nil {
+			m.autocomplete.SetSuggestions(msg.Suggestions)
+			m.showAutocomplete = len(msg.Suggestions) > 0
+		}
+		return m, nil
+	case *models.ApplySuggestionMsg:
+		if msg.Suggestion != "" {
+			m.pathInput = msg.Suggestion
+			m.showAutocomplete = false
+			if m.autocomplete != nil {
+				m.autocomplete.Hide()
+			}
+		}
 		return m, nil
 	default:
 		// 更新子模型
@@ -291,10 +314,24 @@ func (m MainModel) handleMainKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.options.ShowHidden = !m.options.ShowHidden
 		return m, nil
 	case "tab":
-		// 切换焦点
+		// Tab键触发自动补全
+		if m.showAutocomplete && m.autocomplete != nil {
+			// 应用当前选中的建议
+			suggestion := m.autocomplete.GetSelectedSuggestion()
+			if suggestion != "" {
+				m.pathInput = suggestion
+				m.showAutocomplete = false
+				m.autocomplete.Hide()
+			}
+		}
 		return m, nil
 	case "up", "down":
-		// 导航
+		// 如果自动补全可见，则导航建议列表
+		if m.showAutocomplete && m.autocomplete != nil {
+			newModel, cmd := m.autocomplete.Update(msg)
+			m.autocomplete = newModel
+			return m, cmd
+		}
 		return m, nil
 	default:
 		// 处理输入
@@ -319,6 +356,13 @@ func (m MainModel) handleErrorKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleEscKey 处理ESC键返回上一级
 func (m MainModel) handleEscKey() (tea.Model, tea.Cmd) {
+	// 如果自动补全可见，先隐藏自动补全
+	if m.showAutocomplete && m.autocomplete != nil {
+		m.showAutocomplete = false
+		m.autocomplete.Hide()
+		return m, nil
+	}
+	
 	switch m.state {
 	case StateSelect:
 		// 从文件选择器返回主界面
@@ -427,6 +471,13 @@ func (m MainModel) handleInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.pathInput += msg.String()
 		}
 	}
+	
+	// 更新自动补全建议
+	if m.autocomplete != nil && len(m.pathInput) > 0 {
+		// 异步更新建议
+		return m, m.autocomplete.UpdateSuggestionsAsync(m.pathInput)
+	}
+	
 	m.options.MaxDepth = 0
 	if m.pathInput != "." {
 		m.options.MaxDepth = 1
@@ -498,7 +549,18 @@ func (m MainModel) renderMainView() string {
 	// 路径输入
 	content.WriteString(models.NormalStyle.Render("扫描路径: "))
 	content.WriteString(m.pathInput)
-	content.WriteString("\n\n")
+	content.WriteString("\n")
+	
+	// 显示自动补全建议
+	if m.showAutocomplete && m.autocomplete != nil {
+		suggestionsView := m.autocomplete.View()
+		if suggestionsView != "" {
+			content.WriteString(suggestionsView)
+			content.WriteString("\n")
+		}
+	}
+	
+	content.WriteString("\n")
 
 	// 选项
 	content.WriteString(models.NormalStyle.Render("选项:\n"))
@@ -527,6 +589,8 @@ func (m MainModel) renderMainView() string {
 	content.WriteString("\n  Enter - 开始扫描\n")
 	content.WriteString("  s - 选择文件\n")
 	content.WriteString("  c - 配置设置\n")
+	content.WriteString("  Tab - 应用自动补全建议\n")
+	content.WriteString("  ↑↓ - 选择自动补全建议\n")
 	content.WriteString("  ESC - 退出程序\n")
 	content.WriteString("  Ctrl+C - 强制退出\n")
 

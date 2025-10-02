@@ -35,3 +35,14 @@ type ConfigUpdateMsg struct {
 type FileListMsg struct {
 	Items []selector.FileItem
 }
+
+// UpdateSuggestionsMsg 更新建议消息
+type UpdateSuggestionsMsg struct {
+	Suggestions []string
+	Err         error
+}
+
+// ApplySuggestionMsg 应用建议消息
+type ApplySuggestionMsg struct {
+	Suggestion string
+}
