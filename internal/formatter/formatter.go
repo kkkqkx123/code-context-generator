@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-
+	"code-context-generator/internal/formatter/encoding"
 	"code-context-generator/pkg/constants"
 	"code-context-generator/pkg/types"
 )
@@ -40,7 +40,7 @@ func (r RawText) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	safeContent = strings.ReplaceAll(safeContent, "&", "&amp;")
 	safeContent = strings.ReplaceAll(safeContent, "<", "&lt;")
 	safeContent = strings.ReplaceAll(safeContent, ">", "&gt;")
-	
+
 	return e.EncodeElement(struct {
 		Text string `xml:",innerxml"`
 	}{Text: safeContent}, start)
@@ -80,7 +80,7 @@ func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{}
 		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig.Structure != nil {
 			// 创建基于实际数据的自定义结构
 			result := make(map[string]interface{})
-			
+
 			// 首先复制所有自定义字段（除了已知的结构字段）
 			for key, value := range formatConfig.Structure {
 				switch key {
@@ -91,14 +91,14 @@ func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{}
 					result[key] = value
 				}
 			}
-			
+
 			// 应用结构映射
 			if rootTag, ok := formatConfig.Structure["root"].(string); ok && rootTag != "" {
 				result["XMLName"] = xml.Name{Local: rootTag}
 			} else {
 				result["XMLName"] = xml.Name{Local: "context"}
 			}
-			
+
 			// 映射文件和文件夹数据
 			if filesTag, ok := formatConfig.Structure["files"].(string); ok && filesTag != "" {
 				result[filesTag] = map[string]interface{}{
@@ -109,7 +109,7 @@ func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{}
 					"file": data.Files,
 				}
 			}
-			
+
 			if foldersTag, ok := formatConfig.Structure["folders"].(string); ok && foldersTag != "" {
 				result[foldersTag] = map[string]interface{}{
 					"folder": data.Folders,
@@ -119,16 +119,16 @@ func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{}
 					"folder": data.Folders,
 				}
 			}
-			
+
 			// 添加统计信息
 			result["file_count"] = data.FileCount
 			result["folder_count"] = data.FolderCount
 			result["total_size"] = data.TotalSize
-			
+
 			return result
 		}
 	}
-	
+
 	// 返回可序列化的结构，避免map[string]interface{}
 	return struct {
 		Files       []types.FileInfo       `json:"files"`
@@ -153,22 +153,22 @@ func formatFileWithContentHandling(file types.FileInfo, contentHandling types.XM
 	if file.IsBinary {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
-	
+
 	switch contentHandling {
 	case types.XMLContentCDATA:
 		// 使用CDATA包装内容
 		type FileWithCDATA struct {
-			XMLName xml.Name `xml:"file"`
-			Path    string   `xml:"path"`
-			Name    string   `xml:"name"`
-			Size    int64    `xml:"size"`
-			Content string   `xml:",cdata"`
-			ModTime string   `xml:"mod_time"`
-			IsDir   bool     `xml:"is_dir"`
-			IsHidden bool    `xml:"is_hidden"`
-			IsBinary bool    `xml:"is_binary"`
+			XMLName  xml.Name `xml:"file"`
+			Path     string   `xml:"path"`
+			Name     string   `xml:"name"`
+			Size     int64    `xml:"size"`
+			Content  string   `xml:",cdata"`
+			ModTime  string   `xml:"mod_time"`
+			IsDir    bool     `xml:"is_dir"`
+			IsHidden bool     `xml:"is_hidden"`
+			IsBinary bool     `xml:"is_binary"`
 		}
-		
+
 		fileWithCDATA := FileWithCDATA{
 			Path:     file.Path,
 			Name:     file.Name,
@@ -179,27 +179,27 @@ func formatFileWithContentHandling(file types.FileInfo, contentHandling types.XM
 			IsHidden: file.IsHidden,
 			IsBinary: file.IsBinary,
 		}
-		
+
 		output, err := xml.MarshalIndent(fileWithCDATA, "", "  ")
 		if err != nil {
 			return "", fmt.Errorf("XML文件格式化失败: %w", err)
 		}
 		return xml.Header + string(output), nil
-		
+
 	case types.XMLContentRaw:
 		// 使用最小转义
 		type FileWithRaw struct {
-			XMLName xml.Name `xml:"file"`
-			Path    string   `xml:"path"`
-			Name    string   `xml:"name"`
-			Size    int64    `xml:"size"`
-			Content RawText  `xml:"content"`
-			ModTime string   `xml:"mod_time"`
-			IsDir   bool     `xml:"is_dir"`
-			IsHidden bool    `xml:"is_hidden"`
-			IsBinary bool    `xml:"is_binary"`
+			XMLName  xml.Name `xml:"file"`
+			Path     string   `xml:"path"`
+			Name     string   `xml:"name"`
+			Size     int64    `xml:"size"`
+			Content  RawText  `xml:"content"`
+			ModTime  string   `xml:"mod_time"`
+			IsDir    bool     `xml:"is_dir"`
+			IsHidden bool     `xml:"is_hidden"`
+			IsBinary bool     `xml:"is_binary"`
 		}
-		
+
 		fileWithRaw := FileWithRaw{
 			Path:     file.Path,
 			Name:     file.Name,
@@ -210,13 +210,13 @@ func formatFileWithContentHandling(file types.FileInfo, contentHandling types.XM
 			IsHidden: file.IsHidden,
 			IsBinary: file.IsBinary,
 		}
-		
+
 		output, err := xml.MarshalIndent(fileWithRaw, "", "  ")
 		if err != nil {
 			return "", fmt.Errorf("XML文件格式化失败: %w", err)
 		}
 		return xml.Header + string(output), nil
-		
+
 	default:
 		// 默认使用标准XML序列化（转义）
 		output, err := xml.MarshalIndent(file, "", "  ")
@@ -238,21 +238,21 @@ func formatFolderWithContentHandling(folder types.FolderInfo, contentHandling ty
 			return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
 		}
 		return xml.Header + string(output), nil
-		
+
 	case types.XMLContentRaw:
 		// 使用最小转义
 		type FolderWithRaw struct {
-			XMLName xml.Name   `xml:"folder"`
-			Path    string     `xml:"path"`
-			Name    string     `xml:"name"`
-			Files   []types.FileInfo `xml:"files"`
-			Folders []types.FolderInfo `xml:"folders"`
-			ModTime string     `xml:"mod_time"`
-			IsHidden bool      `xml:"is_hidden"`
-			Size    int64      `xml:"size"`
-			Count   int        `xml:"count"`
+			XMLName  xml.Name           `xml:"folder"`
+			Path     string             `xml:"path"`
+			Name     string             `xml:"name"`
+			Files    []types.FileInfo   `xml:"files"`
+			Folders  []types.FolderInfo `xml:"folders"`
+			ModTime  string             `xml:"mod_time"`
+			IsHidden bool               `xml:"is_hidden"`
+			Size     int64              `xml:"size"`
+			Count    int                `xml:"count"`
 		}
-		
+
 		folderWithRaw := FolderWithRaw{
 			Path:     folder.Path,
 			Name:     folder.Name,
@@ -263,13 +263,13 @@ func formatFolderWithContentHandling(folder types.FolderInfo, contentHandling ty
 			Size:     folder.Size,
 			Count:    folder.Count,
 		}
-		
+
 		output, err := xml.MarshalIndent(folderWithRaw, "", "  ")
 		if err != nil {
 			return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
 		}
 		return xml.Header + string(output), nil
-		
+
 	default:
 		// 默认使用标准XML序列化（转义）
 		output, err := xml.MarshalIndent(folder, "", "  ")
@@ -326,11 +326,11 @@ func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
 
 	// 默认结构 - 创建安全的数据副本避免nil引用
 	safeData := struct {
-		Files       []types.FileInfo   `json:"files"`
-		Folders     []types.FolderInfo `json:"folders"`
-		FileCount   int                `json:"file_count"`
-		FolderCount int                `json:"folder_count"`
-		TotalSize   int64              `json:"total_size"`
+		Files       []types.FileInfo       `json:"files"`
+		Folders     []types.FolderInfo     `json:"folders"`
+		FileCount   int                    `json:"file_count"`
+		FolderCount int                    `json:"folder_count"`
+		TotalSize   int64                  `json:"total_size"`
 		Metadata    map[string]interface{} `json:"metadata"`
 	}{
 		Files:       data.Files,
@@ -340,18 +340,18 @@ func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
 		TotalSize:   data.TotalSize,
 		Metadata:    data.Metadata,
 	}
-	
+
 	output, err := json.MarshalIndent(safeData, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("JSON格式化失败: %w", err)
 	}
-	
+
 	// 检查配置中是否指定了编码格式
 	if f.config != nil {
 		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil {
 			if formatConfig.Encoding != "" && formatConfig.Encoding != "utf-8" {
 				// 转换编码
-				encodedOutput, err := convertEncoding(string(output), formatConfig.Encoding)
+				encodedOutput, err := encoding.ConvertEncoding(string(output), formatConfig.Encoding)
 				if err != nil {
 					return "", fmt.Errorf("编码转换失败: %w", err)
 				}
@@ -359,7 +359,7 @@ func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
 			}
 		}
 	}
-	
+
 	return string(output), nil
 }
 
@@ -369,7 +369,7 @@ func (f *JSONFormatter) FormatFile(file types.FileInfo) (string, error) {
 	if file.IsBinary {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
-	
+
 	// 尝试将配置转换为FormatConfig
 	if f.config != nil {
 		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil && formatConfig.Fields != nil {
@@ -456,19 +456,19 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("XML格式化失败: %w", err)
 	}
-	
+
 	result := xml.Header + string(output)
-	
+
 	// 检查配置中是否指定了编码格式
 	if f.config != nil && f.config.Formats.XML.FormatConfig.Encoding != "" && f.config.Formats.XML.FormatConfig.Encoding != "utf-8" {
 		// 转换编码
-		encodedOutput, err := convertEncoding(result, f.config.Formats.XML.FormatConfig.Encoding)
+		encodedOutput, err := encoding.ConvertEncoding(result, f.config.Formats.XML.FormatConfig.Encoding)
 		if err != nil {
 			return "", fmt.Errorf("编码转换失败: %w", err)
 		}
 		return encodedOutput, nil
 	}
-	
+
 	return result, nil
 }
 
@@ -478,12 +478,12 @@ func (f *XMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 	if file.IsBinary {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
-	
+
 	// 根据内容处理选项处理文件内容
 	if f.config != nil && f.config.Formats.XML.Formatting.ContentHandling != "" {
 		return formatFileWithContentHandling(file, f.config.Formats.XML.Formatting.ContentHandling)
 	}
-	
+
 	// 默认使用标准XML序列化
 	output, err := xml.MarshalIndent(file, "", "  ")
 	if err != nil {
@@ -541,7 +541,7 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 			buf.WriteString(fmt.Sprintf("    path = \"%s\"\n", file.Path))
 			buf.WriteString(fmt.Sprintf("    name = \"%s\"\n", file.Name))
 			buf.WriteString(fmt.Sprintf("    size = %d\n", file.Size))
-			buf.WriteString(fmt.Sprintf("    content = \"%s\"\n", escapeTOMLString(file.Content)))
+			buf.WriteString(fmt.Sprintf("    content = \"%s\"\n", encoding.EscapeTOMLString(file.Content)))
 			if i < len(data.Files)-1 {
 				buf.WriteString("\n")
 			}
@@ -563,16 +563,16 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 	}
 
 	result := buf.String()
-	
+
 	// 检查是否需要编码转换
 	if f.encoding != "" && f.encoding != "utf-8" {
-		encodedResult, err := convertEncoding(result, f.encoding)
+		encodedResult, err := encoding.ConvertEncoding(result, f.encoding)
 		if err != nil {
 			return "", fmt.Errorf("编码转换失败: %w", err)
 		}
 		return encodedResult, nil
 	}
-	
+
 	return result, nil
 }
 
@@ -583,14 +583,14 @@ func (f *TOMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 	buf.WriteString(fmt.Sprintf("path = \"%s\"\n", file.Path))
 	buf.WriteString(fmt.Sprintf("name = \"%s\"\n", file.Name))
 	buf.WriteString(fmt.Sprintf("size = %d\n", file.Size))
-	
+
 	// 如果是二进制文件，不显示内容
 	if file.IsBinary {
 		buf.WriteString("content = \"[二进制文件 - 内容未显示]\"\n")
 	} else {
-		buf.WriteString(fmt.Sprintf("content = \"%s\"\n", escapeTOMLString(file.Content)))
+		buf.WriteString(fmt.Sprintf("content = \"%s\"\n", encoding.EscapeTOMLString(file.Content)))
 	}
-	
+
 	buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", file.ModTime.Format(time.RFC3339)))
 
 	return buf.String(), nil
@@ -683,16 +683,16 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 	}
 
 	result := sb.String()
-	
+
 	// 检查是否需要编码转换
 	if f.encoding != "" && f.encoding != "utf-8" {
-		encodedResult, err := convertEncoding(result, f.encoding)
+		encodedResult, err := encoding.ConvertEncoding(result, f.encoding)
 		if err != nil {
 			return "", fmt.Errorf("编码转换失败: %w", err)
 		}
 		return encodedResult, nil
 	}
-	
+
 	return result, nil
 }
 
@@ -794,112 +794,4 @@ func CreateDefaultFactory(config *types.Config) *FormatterFactory {
 	factory.Register(constants.FormatMarkdown, NewMarkdownFormatter(&config.Formats.Markdown))
 
 	return factory
-}
-
-// 辅助方法
-
-// convertEncoding 转换字符串编码
-func convertEncoding(input string, targetEncoding string) (string, error) {
-	// 这里实现编码转换逻辑
-	// 由于Go标准库主要支持UTF-8，我们可以使用第三方库如golang.org/x/text/encoding
-	// 或者简单的字符映射表来实现基本编码转换
-	
-	switch strings.ToLower(targetEncoding) {
-	case "gbk", "gb2312", "gb18030":
-		// 简化的GBK转换示例（实际项目中应使用专业库）
-		return toGBK(input), nil
-	case "big5":
-		// 简化的Big5转换示例
-		return toBig5(input), nil
-	case "shift_jis", "sjis":
-		// 简化的Shift-JIS转换示例
-		return toShiftJIS(input), nil
-	case "euc-jp":
-		// 简化的EUC-JP转换示例
-		return toEUCJP(input), nil
-	case "iso-8859-1", "latin1":
-		// 简化的ISO-8859-1转换示例
-		return toISO88591(input), nil
-	case "utf-8", "utf8":
-		return input, nil
-	default:
-		return "", fmt.Errorf("不支持的编码格式: %s", targetEncoding)
-	}
-}
-
-// 简化的编码转换函数（实际项目中应使用专业库）
-func toGBK(input string) string {
-	// 这里应该使用专业的GBK编码库
-	// 简化实现：只处理ASCII字符，其他字符用?代替
-	var result strings.Builder
-	for _, r := range input {
-		if r < 128 {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('?')
-		}
-	}
-	return result.String()
-}
-
-func toBig5(input string) string {
-	// 简化实现：只处理ASCII字符
-	var result strings.Builder
-	for _, r := range input {
-		if r < 128 {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('?')
-		}
-	}
-	return result.String()
-}
-
-func toShiftJIS(input string) string {
-	// 简化实现：只处理ASCII字符
-	var result strings.Builder
-	for _, r := range input {
-		if r < 128 {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('?')
-		}
-	}
-	return result.String()
-}
-
-func toEUCJP(input string) string {
-	// 简化实现：只处理ASCII字符
-	var result strings.Builder
-	for _, r := range input {
-		if r < 128 {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('?')
-		}
-	}
-	return result.String()
-}
-
-func toISO88591(input string) string {
-	// 简化实现：只处理ASCII字符
-	var result strings.Builder
-	for _, r := range input {
-		if r < 256 {
-			result.WriteRune(r)
-		} else {
-			result.WriteRune('?')
-		}
-	}
-	return result.String()
-}
-
-func escapeTOMLString(s string) string {
-	// 简单的TOML字符串转义
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	s = strings.ReplaceAll(s, "\"", "\\\"")
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	s = strings.ReplaceAll(s, "\t", "\\t")
-	return s
 }

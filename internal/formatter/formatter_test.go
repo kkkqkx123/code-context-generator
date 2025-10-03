@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"code-context-generator/internal/formatter/encoding"
 	"code-context-generator/pkg/types"
 )
 
@@ -679,9 +680,9 @@ func TestEscapeTOMLString(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := escapeTOMLString(test.input)
+		result := encoding.EscapeTOMLString(test.input)
 		if result != test.expected {
-			t.Errorf("escapeTOMLString(%q) = %q, expected %q", test.input, result, test.expected)
+			t.Errorf("encoding.EscapeTOMLString(%q) = %q, expected %q", test.input, result, test.expected)
 		}
 	}
 }
