@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<context>
+  <files>
+    <file>
+      <Name>config.toml</Name>
+      <Path>test_files\config.toml</Path>
+      <Content>title = &#34;test&#34;&#xD;&#xA;</Content>
+      <Size>34</Size>
+      <ModTime>2025-10-01T12:32:08.6653158+08:00</ModTime>
+      <IsDir>false</IsDir>
+      <IsHidden>false</IsHidden>
+      <IsBinary>false</IsBinary>
+    </file>
+    <file>
+      <Name>config.json</Name>
+      <Path>test_files\config.json</Path>
+      <Content>{&#34;key&#34;: &#34;value&#34;}&#xD;&#xA;</Content>
+      <Size>38</Size>
+      <ModTime>2025-10-01T12:32:08.6601883+08:00</ModTime>
+      <IsDir>false</IsDir>
+      <IsHidden>false</IsHidden>
+      <IsBinary>false</IsBinary>
+    </file>
+    <file>
+      <Name>readme.md</Name>
+      <Path>test_files\readme.md</Path>
+      <Content># Test&#xD;&#xA;</Content>
+      <Size>18</Size>
+      <ModTime>2025-10-01T12:32:08.6565017+08:00</ModTime>
+      <IsDir>false</IsDir>
+      <IsHidden>false</IsHidden>
+      <IsBinary>false</IsBinary>
+    </file>
+    <file>
+      <Name>config.xml</Name>
+      <Path>test_files\config.xml</Path>
+      <Content>&lt;root&gt;&lt;/root&gt;&#xD;&#xA;</Content>
+      <Size>32</Size>
+      <ModTime>2025-10-01T12:32:08.6621926+08:00</ModTime>
+      <IsDir>false</IsDir>
+      <IsHidden>false</IsHidden>
+      <IsBinary>false</IsBinary>
+    </file>
+    <file>
+      <Name>data.txt</Name>
+      <Path>test_files\data.txt</Path>
+      <Content>test content&#xD;&#xA;</Content>
+      <Size>30</Size>
+      <ModTime>2025-10-01T12:32:08.6584999+08:00</ModTime>
+      <IsDir>false</IsDir>
+      <IsHidden>false</IsHidden>
+      <IsBinary>false</IsBinary>
+    </file>
+  </files>
+  <folders></folders>
+  <file_count>5</file_count>
+  <folder_count>0</folder_count>
+  <total_size>152</total_size>
+</context>

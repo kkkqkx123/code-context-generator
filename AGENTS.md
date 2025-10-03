@@ -23,19 +23,19 @@ go 1.24.5
 **CLI参数支持**：
 ```bash
 # 基本使用
-code-context-generator --format xml --output output.xml
+c-gen --format xml --output output.xml
 
 # 使用配置文件
-code-context-generator --config config.yaml --format json
+c-gen --config config.yaml --format json
 
 # 覆盖配置选项
-code-context-generator --format markdown --max-depth 3 --exclude "*.log,*.tmp"
+c-gen --format markdown --max-depth 3 --exclude "*.log,*.tmp"
 
 # 指定输出目录和文件名模板
-code-context-generator --output-dir ./outputs --filename-template "project_{{.timestamp}}.md"
+c-gen --output-dir ./outputs --filename-template "project_{{.timestamp}}.md"
 
 # 显示配置验证信息
-code-context-generator --validate-config --config config.yaml
+c-gen --validate-config --config config.yaml
 ```
 
 3. 必须能够处理中文路径、文件名
@@ -148,6 +148,7 @@ output:
 - JSON格式：使用标准库`encoding/json`
 - TOML格式：使用`github.com/BurntSushi/toml`（兼容encoding/json接口）
 - XML格式：使用标准库`encoding/xml`
+
 
 支持在.env中选择默认导出格式，也支持CLI参数临时指定格式
 

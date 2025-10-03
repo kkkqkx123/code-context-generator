@@ -45,7 +45,12 @@ func NewWalker() Walker {
 
 // NewFileSystemWalker 创建新的文件系统遍历器（别名）
 func NewFileSystemWalker(options types.WalkOptions) Walker {
-	return &FileSystemWalker{}
+	return &FileSystemWalker{
+		maxWorkers:   10,               // 限制并发worker数量
+		maxFileCount: 1000,             // 限制最大文件数量
+		maxDepth:     5,                // 限制最大深度
+		timeout:      30 * time.Second, // 30秒超时
+	}
 }
 
 // Walk 遍历文件系统

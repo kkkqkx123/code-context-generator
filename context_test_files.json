@@ -1,0 +1,68 @@
+{
+  "XMLName": {
+    "Space": "",
+    "Local": "context"
+  },
+  "file": "file",
+  "file_count": 5,
+  "files": {
+    "file": [
+      {
+        "name": "config.toml",
+        "path": "test_files\\config.toml",
+        "content": "title = \"test\"\r\n",
+        "size": 34,
+        "mod_time": "2025-10-01T12:32:08.6653158+08:00",
+        "is_dir": false,
+        "is_hidden": false,
+        "is_binary": false
+      },
+      {
+        "name": "readme.md",
+        "path": "test_files\\readme.md",
+        "content": "# Test\r\n",
+        "size": 18,
+        "mod_time": "2025-10-01T12:32:08.6565017+08:00",
+        "is_dir": false,
+        "is_hidden": false,
+        "is_binary": false
+      },
+      {
+        "name": "config.xml",
+        "path": "test_files\\config.xml",
+        "content": "\u003croot\u003e\u003c/root\u003e\r\n",
+        "size": 32,
+        "mod_time": "2025-10-01T12:32:08.6621926+08:00",
+        "is_dir": false,
+        "is_hidden": false,
+        "is_binary": false
+      },
+      {
+        "name": "config.json",
+        "path": "test_files\\config.json",
+        "content": "{\"key\": \"value\"}\r\n",
+        "size": 38,
+        "mod_time": "2025-10-01T12:32:08.6601883+08:00",
+        "is_dir": false,
+        "is_hidden": false,
+        "is_binary": false
+      },
+      {
+        "name": "data.txt",
+        "path": "test_files\\data.txt",
+        "content": "test content\r\n",
+        "size": 30,
+        "mod_time": "2025-10-01T12:32:08.6584999+08:00",
+        "is_dir": false,
+        "is_hidden": false,
+        "is_binary": false
+      }
+    ]
+  },
+  "folder": "folder",
+  "folder_count": 0,
+  "folders": {
+    "folder": []
+  },
+  "total_size": 152
+}

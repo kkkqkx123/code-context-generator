@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"code-context-generator/internal/config"
@@ -26,13 +27,14 @@ var (
 
 // rootCmd 根命令
 var rootCmd = &cobra.Command{
-	Use:   "code-context-generator",
+	Use:   "code-context-generator [路径]",
 	Short: "代码上下文生成器",
 	Long: `代码上下文生成器 - 智能生成代码项目结构文档
 
 支持多种输出格式（JSON、XML、TOML、Markdown），提供自动文件扫描，
 自动补全功能，以及丰富的配置选项。`,
 	Version: version,
+	Args:    cobra.MaximumNArgs(1), // 接受一个可选的路径参数
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// 首先加载.env文件（如果存在）
 		if err := env.LoadEnv(""); err != nil {
@@ -56,13 +58,14 @@ var rootCmd = &cobra.Command{
 		cfg = configManager.Get()
 		return nil
 	},
+	RunE: runGenerate, // 默认执行生成命令
 }
 
-// generateCmd 生成命令
+// generateCmd 生成命令 (现在为可选命令，保持向后兼容)
 var generateCmd = &cobra.Command{
 	Use:   "generate [路径]",
-	Short: "生成代码上下文",
-	Long:  "扫描指定路径并生成代码项目结构文档",
+	Short: "生成代码上下文 (可选命令)",
+	Long:  "扫描指定路径并生成代码项目结构文档。现在可以直接运行程序而不需要此命令。",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runGenerate,
 }
@@ -104,7 +107,20 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "配置文件路径")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "详细输出")
 
-	// generate命令标志
+	// 根命令的生成标志（与generate命令相同）
+	rootCmd.Flags().StringP("output", "o", "", "输出文件路径")
+	rootCmd.Flags().StringP("format", "f", "json", "输出格式 (json, xml, toml, markdown)")
+	rootCmd.Flags().StringSliceP("exclude", "e", []string{}, "排除的文件/目录模式")
+	rootCmd.Flags().StringSliceP("include", "i", []string{}, "包含的文件/目录模式")
+	rootCmd.Flags().BoolP("recursive", "r", true, "递归扫描")
+	rootCmd.Flags().Bool("hidden", false, "包含隐藏文件")
+	rootCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示无限制)")
+	rootCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
+	rootCmd.Flags().BoolP("content", "C", true, "包含文件内容")
+	rootCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
+	rootCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
+
+	// generate命令标志（保持向后兼容）
 	generateCmd.Flags().StringP("output", "o", "", "输出文件路径")
 	generateCmd.Flags().StringP("format", "f", "json", "输出格式 (json, xml, toml, markdown)")
 	generateCmd.Flags().StringSliceP("exclude", "e", []string{}, "排除的文件/目录模式")
@@ -245,8 +261,9 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		outputData = addFileContent(outputData, walkResult, content, hash)
 	}
 
-	// 输出结果
+	// 输出结果 - 默认写入文件，控制台输出仅在明确指定时
 	if output != "" {
+		// 使用指定的输出文件
 		// 标准化换行符为当前操作系统格式
 		normalizedData := utils.NormalizeLineEndings(outputData)
 		if err := os.WriteFile(output, []byte(normalizedData), 0644); err != nil {
@@ -256,8 +273,20 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			fmt.Println(utils.SuccessColor("输出已写入:"), output)
 		}
 	} else {
-		// 控制台输出也标准化换行符
-		fmt.Println(utils.NormalizeLineEndings(outputData))
+		// 自动生成默认输出文件名
+		defaultOutput := fmt.Sprintf("context_%s.%s", filepath.Base(path), format)
+		if format == "markdown" {
+			defaultOutput = fmt.Sprintf("context_%s.md", filepath.Base(path))
+		}
+		
+		// 标准化换行符为当前操作系统格式
+		normalizedData := utils.NormalizeLineEndings(outputData)
+		if err := os.WriteFile(defaultOutput, []byte(normalizedData), 0644); err != nil {
+			return fmt.Errorf("写入默认输出文件失败: %w", err)
+		}
+		fmt.Println(utils.SuccessColor("✅ 成功生成代码上下文文件:"), defaultOutput)
+		fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", result.FileCount, result.FolderCount)
+		fmt.Printf("💾 总大小: %.2f MB\n", float64(result.TotalSize)/(1024*1024))
 	}
 
 	return nil

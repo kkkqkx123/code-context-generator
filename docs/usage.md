@@ -22,7 +22,7 @@
 ```bash
 git clone https://github.com/yourusername/code-context-generator.git
 cd code-context-generator
-go build -o c-gen cmd/cli/main.go
+go build -o c-gen.exe cli/main.go
 ```
 
 ## CLI使用指南
