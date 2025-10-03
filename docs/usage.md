@@ -6,6 +6,7 @@
 - **多格式输出**: 支持JSON、XML、Markdown、TOML格式
 - **智能文件过滤**: 基于扩展名和内容分析的二进制文件检测
 - **内容提取**: 可选择性包含文件内容
+- **智能文件大小显示**: 根据文件大小自动选择B、KB、MB单位显示
 
 ### 高级特性
 - **多线程处理**: 并行扫描提升性能
@@ -122,7 +123,7 @@ include_toc = true
 
 ## 命令参数详解
 
-### generate命令
+### generate命令(参数缺省时默认使用generate)
 - `-f, --format`: 输出格式（json, xml, markdown, toml）
 - `-o, --output`: 输出文件路径
 - `-C, --content`: 包含文件内容

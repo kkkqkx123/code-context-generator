@@ -119,6 +119,8 @@ func init() {
 	rootCmd.Flags().BoolP("content", "C", true, "包含文件内容")
 	rootCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
 	rootCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
+	rootCmd.Flags().StringSliceP("multiple-files", "m", []string{}, "多个文件路径（可多次使用）")
+	rootCmd.Flags().StringP("pattern-file", "p", "", "从文件读取模式（支持.gitignore格式，兼容Windows/Linux路径分隔符）")
 
 	// generate命令标志（保持向后兼容）
 	generateCmd.Flags().StringP("output", "o", "", "输出文件路径")
@@ -132,6 +134,8 @@ func init() {
 	generateCmd.Flags().BoolP("content", "C", true, "包含文件内容")
 	generateCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
 	generateCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
+	generateCmd.Flags().StringSliceP("multiple-files", "m", []string{}, "多个文件路径（可多次使用）")
+	generateCmd.Flags().StringP("pattern-file", "p", "", "从文件读取模式（支持.gitignore格式，兼容Windows/Linux路径分隔符）")
 }
 
 // main 主函数
@@ -144,12 +148,6 @@ func main() {
 
 // runGenerate 运行生成命令
 func runGenerate(cmd *cobra.Command, args []string) error {
-	// 获取路径
-	path := "."
-	if len(args) > 0 {
-		path = args[0]
-	}
-
 	// 解析标志
 	output, _ := cmd.Flags().GetString("output")
 	format, _ := cmd.Flags().GetString("format")
@@ -162,6 +160,29 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	content, _ := cmd.Flags().GetBool("content")
 	hash, _ := cmd.Flags().GetBool("hash")
 	excludeBinary, _ := cmd.Flags().GetBool("exclude-binary")
+	multipleFiles, _ := cmd.Flags().GetStringSlice("multiple-files")
+	patternFile, _ := cmd.Flags().GetString("pattern-file")
+
+	// 如果指定了多个文件，使用第一个文件作为路径参数
+	path := "."
+	if len(multipleFiles) > 0 {
+		path = multipleFiles[0] // 使用第一个文件作为基础路径
+	} else if len(args) > 0 {
+		path = args[0]
+	}
+
+	// 如果指定了模式文件，读取并解析模式
+	if patternFile != "" {
+		patterns, err := readPatternFile(patternFile)
+		if err != nil {
+			return fmt.Errorf("读取模式文件失败: %w", err)
+		}
+		if len(exclude) == 0 {
+			exclude = patterns
+		} else {
+			exclude = append(exclude, patterns...)
+		}
+	}
 
 	// 合并配置文件设置（命令行参数优先）
 	if len(exclude) == 0 && len(cfg.Filters.ExcludePatterns) > 0 {
@@ -202,7 +223,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// 执行遍历
 	if verbose {
-		fmt.Printf("正在扫描路径: %s (递归: %v)\n", path, recursive)
+		if len(multipleFiles) > 0 {
+			fmt.Printf("正在处理指定文件: %v\n", multipleFiles)
+		} else {
+			fmt.Printf("正在扫描路径: %s (递归: %v)\n", path, recursive)
+		}
 		fmt.Printf("排除模式: %v\n", exclude)
 		fmt.Printf("最大深度: %d, 最大文件大小: %d\n", maxDepth, maxSize)
 	}
@@ -216,9 +241,21 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		FollowSymlinks:  false,
 		ShowHidden:      hidden,
 		ExcludeBinary:   excludeBinary,
+		MultipleFiles:   multipleFiles,
+		PatternFile:     patternFile,
 	}
 
-	result, err := walker.Walk(path, walkOptions)
+	var result *types.ContextData
+	var err error
+
+	if len(multipleFiles) > 0 {
+		// 处理多个指定文件
+		result, err = walker.Walk(multipleFiles[0], walkOptions)
+	} else {
+		// 正常遍历目录
+		result, err = walker.Walk(path, walkOptions)
+	}
+
 	if err != nil {
 		return fmt.Errorf("扫描失败: %w", err)
 	}
@@ -274,9 +311,21 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// 自动生成默认输出文件名
-		defaultOutput := fmt.Sprintf("context_%s.%s", filepath.Base(path), format)
-		if format == "markdown" {
-			defaultOutput = fmt.Sprintf("context_%s.md", filepath.Base(path))
+		var defaultOutput string
+		if len(multipleFiles) > 0 {
+			// 使用第一个文件名作为基础名称
+			baseName := filepath.Base(multipleFiles[0])
+			ext := filepath.Ext(baseName)
+			baseName = strings.TrimSuffix(baseName, ext)
+			defaultOutput = fmt.Sprintf("context_%s.%s", baseName, format)
+			if format == "markdown" {
+				defaultOutput = fmt.Sprintf("context_%s.md", baseName)
+			}
+		} else {
+			defaultOutput = fmt.Sprintf("context_%s.%s", filepath.Base(path), format)
+			if format == "markdown" {
+				defaultOutput = fmt.Sprintf("context_%s.md", filepath.Base(path))
+			}
 		}
 		
 		// 标准化换行符为当前操作系统格式
@@ -286,7 +335,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Println(utils.SuccessColor("✅ 成功生成代码上下文文件:"), defaultOutput)
 		fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", result.FileCount, result.FolderCount)
-		fmt.Printf("💾 总大小: %.2f MB\n", float64(result.TotalSize)/(1024*1024))
+		fmt.Printf("💾 总大小: %s\n", utils.FormatFileSize(result.TotalSize))
 	}
 
 	return nil
@@ -340,6 +389,41 @@ func addFileContent(outputData string, _ *types.WalkResult, includeContent, incl
 	}
 
 	return outputData
+}
+
+// readPatternFile 读取模式文件，支持.gitignore格式，兼容Windows/Linux路径分隔符
+func readPatternFile(patternFile string) ([]string, error) {
+	content, err := os.ReadFile(patternFile)
+	if err != nil {
+		return nil, fmt.Errorf("无法读取模式文件: %w", err)
+	}
+
+	var patterns []string
+	lines := strings.Split(string(content), "\n")
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// 跳过空行和注释
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		
+		// 统一路径分隔符：将\和/都转换为当前系统的路径分隔符
+		// 这样可以支持Windows和Linux格式的路径
+		if filepath.Separator == '\\' {
+			// Windows系统：将/转换为\，同时处理双反斜杠
+			line = strings.ReplaceAll(line, "/", "\\")
+			line = strings.ReplaceAll(line, "\\\\", "\\") // 处理双反斜杠
+		} else {
+			// Unix/Linux系统：将\转换为/
+			line = strings.ReplaceAll(line, "\\", "/")
+			line = strings.ReplaceAll(line, "//", "/") // 处理双斜杠
+		}
+		
+		patterns = append(patterns, line)
+	}
+	
+	return patterns, nil
 }
 
 // generateConfigOutput 生成配置输出

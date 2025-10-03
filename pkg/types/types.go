@@ -180,6 +180,8 @@ type WalkOptions struct {
 	ShowHidden      bool
 	ExcludeBinary   bool
 	SelectedFiles   []string // 选中的具体文件路径，如果为空则使用模式匹配
+	MultipleFiles   []string // 多个文件路径（-m参数）
+	PatternFile     string   // 模式文件路径（-r参数）
 }
 
 // FileProcessingConfig 文件处理配置

@@ -70,11 +70,6 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 		}
 	}
 
-	// 验证根路径
-	if _, err := os.Stat(rootPath); err != nil {
-		return nil, fmt.Errorf("根路径不存在: %w", err)
-	}
-
 	var contextData types.ContextData
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -84,6 +79,23 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 	contextData.Files = []types.FileInfo{}
 	contextData.Folders = []types.FolderInfo{}
 	contextData.Metadata = make(map[string]interface{})
+	// 设置根路径 - 对于多个文件，使用第一个文件的路径
+	if len(options.MultipleFiles) > 0 {
+		contextData.Metadata["root_path"] = filepath.Dir(options.MultipleFiles[0])
+		contextData.Metadata["multiple_files"] = options.MultipleFiles
+	} else {
+		contextData.Metadata["root_path"] = rootPath
+	}
+
+	// 如果指定了多个文件，直接处理这些文件而不遍历目录
+	if len(options.MultipleFiles) > 0 {
+		return w.processMultipleFiles(options.MultipleFiles, options, progressCallback)
+	}
+
+	// 验证根路径
+	if _, err := os.Stat(rootPath); err != nil {
+		return nil, fmt.Errorf("根路径不存在: %w", err)
+	}
 
 	// 首先统计总文件数
 	totalFiles := 0
@@ -208,7 +220,27 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 
 // shouldIncludeFile 检查是否应该包含文件
 func (w *FileSystemWalker) shouldIncludeFile(path string, rootPath string, options *types.WalkOptions) bool {
-	// 如果指定了选中的文件，只包含这些文件
+	// 如果指定了多个文件，只包含这些文件
+	if len(options.MultipleFiles) > 0 {
+		// 将路径转换为绝对路径进行比较
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return false
+		}
+
+		for _, selectedFile := range options.MultipleFiles {
+			absSelectedFile, err := filepath.Abs(selectedFile)
+			if err != nil {
+				continue
+			}
+			if absPath == absSelectedFile {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 如果指定了选中的文件，只包含这些文件（向后兼容）
 	if len(options.SelectedFiles) > 0 {
 		// 将路径转换为绝对路径进行比较
 		absPath, err := filepath.Abs(path)
@@ -303,4 +335,57 @@ func (w *FileSystemWalker) shouldIncludeFile(path string, rootPath string, optio
 	}
 
 	return true
+}
+
+// processMultipleFiles 处理多个指定文件而不遍历目录
+func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.WalkOptions, progressCallback func(processed, total int, currentFile string)) (*types.ContextData, error) {
+	var contextData types.ContextData
+	contextData.Files = []types.FileInfo{}
+	contextData.Folders = []types.FolderInfo{}
+	contextData.Metadata = make(map[string]interface{})
+
+	// 过滤并处理指定的文件
+	processedFiles := 0
+	totalFiles := len(files)
+
+	for _, filePath := range files {
+		// 验证文件存在
+		info, err := os.Stat(filePath)
+		if err != nil {
+			continue // 跳过不存在的文件
+		}
+
+		// 只处理文件，跳过目录
+		if info.IsDir() {
+			continue
+		}
+
+		// 检查是否应该包含此文件
+		if !w.shouldIncludeFile(filePath, filepath.Dir(filePath), options) {
+			continue
+		}
+
+		// 获取文件信息
+		fileInfo, err := w.GetFileInfo(filePath)
+		if err != nil {
+			continue // 跳过无法获取信息的文件
+		}
+
+		contextData.Files = append(contextData.Files, *fileInfo)
+		contextData.FileCount++
+		contextData.TotalSize += fileInfo.Size
+		processedFiles++
+
+		// 更新进度
+		if progressCallback != nil {
+			progressCallback(processedFiles, totalFiles, filepath.Base(filePath))
+		}
+	}
+
+	// 最终进度更新
+	if progressCallback != nil {
+		progressCallback(processedFiles, totalFiles, "完成")
+	}
+
+	return &contextData, nil
 }

@@ -232,24 +232,24 @@ go list -json -m all | nancy sleuth
 #### 步骤5：构建应用
 ```bash
 # 构建CLI版本
-go build -o bin/code-context-generator cmd/cli/main.go
+go build -o bin/c-gen cmd/cli/main.go
 
 # 构建所有版本
 make build
 
 # 交叉编译
-GOOS=windows GOARCH=amd64 go build -o bin/code-context-generator.exe cmd/cli/main.go
-GOOS=linux GOARCH=amd64 go build -o bin/code-context-generator-linux cmd/cli/main.go
-GOOS=darwin GOARCH=amd64 go build -o bin/code-context-generator-darwin cmd/cli/main.go
+GOOS=windows GOARCH=amd64 go build -o bin/c-gen.exe cmd/cli/main.go
+GOOS=linux GOARCH=amd64 go build -o bin/c-gen-linux cmd/cli/main.go
+GOOS=darwin GOARCH=amd64 go build -o bin/c-gen-darwin cmd/cli/main.go
 ```
 
 #### 步骤6：运行应用
 ```bash
 # 运行CLI版本
-./bin/code-context-generator --help
+./bin/c-gen --help
 
 # 使用示例
-./bin/code-context-generator generate . -f json -o output.json
+./bin/c-gen generate . -f json -o output.json
 ```
 
 #### 步骤7：提交代码

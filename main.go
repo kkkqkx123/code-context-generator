@@ -10,6 +10,7 @@ import (
 	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/internal/formatter"
+	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/types"
 )
 
@@ -175,5 +176,5 @@ func main() {
 
 	fmt.Printf("\n✅ 成功生成代码上下文文件: %s\n", finalOutputFile)
 	fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", contextData.FileCount, contextData.FolderCount)
-	fmt.Printf("💾 总大小: %.2f MB\n", float64(contextData.TotalSize)/(1024*1024))
+	fmt.Printf("💾 总大小: %s\n", utils.FormatFileSize(contextData.TotalSize))
 }
