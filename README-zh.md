@@ -1,6 +1,7 @@
 # 代码上下文生成器 (Code Context Generator)
 
 一个智能的代码项目结构文档生成工具，支持CLI交互方式，能够扫描代码项目并生成结构化的文档输出。
+本项目与类似项目repomix相比，能够通过-m参数打包多个文件或通过-p参数指定模式文件，而非仅支持打包
 
 ## 功能特性
 
@@ -36,7 +37,7 @@
 ```bash
 git clone https://github.com/yourusername/code-context-generator.git
 cd code-context-generator
-go build -o code-context-generator cmd/cli/main.go
+go build -o c-gen cli/main.go
 ```
 
 
@@ -48,46 +49,47 @@ go build -o code-context-generator cmd/cli/main.go
 #### 基本用法
 ```bash
 # 自动扫描当前目录并生成文档
-go run main.go
+go run cli/main.go
 
 # 扫描指定目录
-go run main.go /path/to/project
+go run cli/main.go /path/to/project
 ```
 
 #### 高级用法
+generate是默认行为，可以省略
 ```bash
 # 排除特定文件/目录
-./code-context-generator generate -e "*.log" -e "node_modules" -e ".git"
+./c-gen generate -e "*.log" -e "node_modules" -e ".git"
 
 # 包含隐藏文件，限制扫描深度
-./code-context-generator generate -h -d 3
+./c-gen generate -h -d 3
 
 # 包含文件内容和哈希值
-./code-context-generator generate -C -H
+./c-gen generate -C -H
 
 # 限制文件大小
-./code-context-generator generate -s 1048576  # 1MB
+./c-gen generate -s 1048576  # 1MB
 
 # 排除二进制文件（默认行为）
-./code-context-generator generate --exclude-binary
+./c-gen generate --exclude-binary
 
 # 包含二进制文件（不推荐）
-./code-context-generator generate --exclude-binary=false
+./c-gen generate --exclude-binary=false
 ```
 
 #### 多文件处理
 ```bash
 # 指定多个文件生成上下文
-./code-context-generator generate -m file1.go -m file2.go -m file3.go
+./c-gen generate -m file1.go -m file2.go -m file3.go
 
 # 结合模式文件过滤多个文件
-./code-context-generator generate -m src/main.go -m src/utils.go -p patterns.txt
+./c-gen generate -m src/main.go -m src/utils.go -p patterns.txt
 ```
 
 #### 模式文件使用
 ```bash
 # 使用模式文件过滤文件
-./code-context-generator generate -p patterns.txt
+./c-gen generate -p patterns.txt
 
 # 模式文件示例 (patterns.txt)
 # *.go          # 包含所有Go文件
@@ -99,19 +101,19 @@ go run main.go /path/to/project
 #### 自动文件扫描
 ```bash
 # 启动交互式文件选择器
-./code-context-generator select
+./c-gen select
 
 # 选择后输出为指定格式
-./code-context-generator select -f xml -o selected-files.xml
+./c-gen select -f xml -o selected-files.xml
 ```
 
 #### 配置管理
 ```bash
 # 初始化配置文件
-./code-context-generator config init
+./c-gen config init
 
 # 显示当前配置
-./code-context-generator config show
+./c-gen config show
 ```
 
 #
@@ -356,37 +358,6 @@ go mod download
 - 关联相关Issue
 - 添加适当的标签
 
-## 路线图
-
-### 近期计划 (v1.1)
-- [ ] 远程文件系统支持（FTP、SFTP）
-- [ ] 插件系统
-- [ ] 主题自定义
-- [ ] 多语言支持
-
-### 中期计划 (v1.2)
-- [ ] Web界面
-- [ ] API服务
-- [ ] 数据库集成
-- [ ] 云存储支持
-
-### 长期计划 (v2.0)
-- [ ] AI智能分析
-- [ ] 代码质量检测
-- [ ] 依赖关系图
-- [ ] 实时同步
-
-## 许可证
-
-MIT License - 详见 [LICENSE](LICENSE) 文件
-
-## 致谢
-
-- [Cobra](https://github.com/spf13/cobra) - CLI框架
-
-- [Lipgloss](https://github.com/charmbracelet/lipgloss) - 样式库
-- 所有贡献者和支持者
-
 ---
 
-⭐ 如果这个项目对你有帮助，请给我们一个星标！
+⭐ 如果这个项目对你有帮助，请给我一个星标！

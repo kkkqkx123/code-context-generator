@@ -175,6 +175,16 @@ func (cm *ConfigManager) GetEnvOverrides() map[string]string {
 		env.EnvExcludePatterns:  "exclude_patterns",
 		env.EnvEncoding:         "encoding",
 		env.EnvIncludeMetadata:  "include_metadata",
+		// 安全扫描配置
+		env.EnvSecurityEnabled:           "security_enabled",
+		env.EnvSecurityFailOnCritical:    "security_fail_on_critical",
+		env.EnvSecurityScanLevel:         "security_scan_level",
+		env.EnvSecurityReportFormat:      "security_report_format",
+		env.EnvSecurityDetectCredentials: "security_detect_credentials",
+		env.EnvSecurityDetectSQLInjection: "security_detect_sql_injection",
+		env.EnvSecurityDetectXSS:         "security_detect_xss",
+		env.EnvSecurityDetectPathTraversal: "security_detect_path_traversal",
+		env.EnvSecurityDetectQuality:     "security_detect_quality",
 	}
 
 	for envKey, fieldName := range mapping {
@@ -197,6 +207,17 @@ func (cm *ConfigManager) applyEnvOverrides(config *types.Config) {
 	if outputDir := env.GetOutputDir(); outputDir != "" {
 		config.Output.OutputDir = outputDir
 	}
+
+	// 应用安全扫描配置覆盖
+	config.Security.Enabled = env.GetSecurityEnabled()
+	config.Security.FailOnCritical = env.GetSecurityFailOnCritical()
+	config.Security.ScanLevel = env.GetSecurityScanLevel()
+	config.Security.ReportFormat = env.GetSecurityReportFormat()
+	config.Security.Detectors.Credentials = env.GetSecurityDetectCredentials()
+	config.Security.Detectors.SQLInjection = env.GetSecurityDetectSQLInjection()
+	config.Security.Detectors.XSS = env.GetSecurityDetectXSS()
+	config.Security.Detectors.PathTraversal = env.GetSecurityDetectPathTraversal()
+	config.Security.Detectors.Quality = env.GetSecurityDetectQuality()
 
 	// 应用文件名模板覆盖
 	if filenameTemplate := env.GetFilenameTemplate(); filenameTemplate != "" {
@@ -599,6 +620,19 @@ func GetDefaultConfig() *types.Config {
 			IncludeHidden:  false,
 			IncludeContent: true, // 默认包含文件内容
 			IncludeHash:    false,
+		},
+		Security: types.SecurityConfig{
+			Enabled:     true,
+			ScanLevel:   "standard",
+			FailOnCritical: false,
+			ReportFormat: "text",
+			Detectors: types.DetectorConfig{
+				Credentials:    true,
+				SQLInjection: true,
+				XSS:          true,
+				PathTraversal: true,
+				Quality:      true,
+			},
 		},
 		Formats: types.FormatsConfig{
 			XML: types.XMLFormatConfig{

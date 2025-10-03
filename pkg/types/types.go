@@ -61,6 +61,7 @@ type Config struct {
 	FileProcessing FileProcessingConfig `yaml:"file_processing" json:"file_processing" toml:"file_processing"`
 	Performance   PerformanceConfig   `yaml:"performance" json:"performance" toml:"performance"`
 	Logging       LoggingConfig       `yaml:"logging" json:"logging" toml:"logging"`
+	Security      SecurityConfig      `yaml:"security" json:"security" toml:"security"`
 }
 
 // FormatsConfig 输出格式配置

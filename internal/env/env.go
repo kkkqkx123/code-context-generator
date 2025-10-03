@@ -33,6 +33,17 @@ const (
 	// 输出配置
 	EnvEncoding         = constants.EnvPrefix + "ENCODING"
 	EnvIncludeMetadata  = constants.EnvPrefix + "INCLUDE_METADATA"
+	
+	// 安全扫描配置
+	EnvSecurityEnabled           = constants.EnvPrefix + "SECURITY_ENABLED"
+	EnvSecurityFailOnCritical    = constants.EnvPrefix + "SECURITY_FAIL_ON_CRITICAL"
+	EnvSecurityScanLevel         = constants.EnvPrefix + "SECURITY_SCAN_LEVEL"
+	EnvSecurityReportFormat      = constants.EnvPrefix + "SECURITY_REPORT_FORMAT"
+	EnvSecurityDetectCredentials = constants.EnvPrefix + "SECURITY_DETECT_CREDENTIALS"
+	EnvSecurityDetectSQLInjection = constants.EnvPrefix + "SECURITY_DETECT_SQL_INJECTION"
+	EnvSecurityDetectXSS         = constants.EnvPrefix + "SECURITY_DETECT_XSS"
+	EnvSecurityDetectPathTraversal = constants.EnvPrefix + "SECURITY_DETECT_PATH_TRAVERSAL"
+	EnvSecurityDetectQuality     = constants.EnvPrefix + "SECURITY_DETECT_QUALITY"
 )
 
 // LoadEnv 加载.env文件到环境变量中
@@ -162,6 +173,17 @@ func GetAllEnvVars() map[string]string {
 	envVars[EnvExcludeBinary] = strconv.FormatBool(GetEnvBool(EnvExcludeBinary, true))
 	envVars[EnvExcludePatterns] = GetEnvWithDefault(EnvExcludePatterns, "")
 	
+	// 安全扫描配置
+	envVars[EnvSecurityEnabled] = strconv.FormatBool(GetEnvBool(EnvSecurityEnabled, true))
+	envVars[EnvSecurityFailOnCritical] = strconv.FormatBool(GetEnvBool(EnvSecurityFailOnCritical, false))
+	envVars[EnvSecurityScanLevel] = GetEnvWithDefault(EnvSecurityScanLevel, "standard")
+	envVars[EnvSecurityReportFormat] = GetEnvWithDefault(EnvSecurityReportFormat, "text")
+	envVars[EnvSecurityDetectCredentials] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectCredentials, true))
+	envVars[EnvSecurityDetectSQLInjection] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectSQLInjection, true))
+	envVars[EnvSecurityDetectXSS] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectXSS, true))
+	envVars[EnvSecurityDetectPathTraversal] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectPathTraversal, true))
+	envVars[EnvSecurityDetectQuality] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectQuality, true))
+	
 	return envVars
 }
 
@@ -228,6 +250,43 @@ func GetIncludeMetadata() bool {
 // 获取排除模式配置
 func GetExcludePatterns() string {
 	return GetEnvWithDefault(EnvExcludePatterns, "")
+}
+
+// 获取安全扫描配置
+func GetSecurityEnabled() bool {
+	return GetEnvBool(EnvSecurityEnabled, true)
+}
+
+func GetSecurityFailOnCritical() bool {
+	return GetEnvBool(EnvSecurityFailOnCritical, false)
+}
+
+func GetSecurityScanLevel() string {
+	return GetEnvWithDefault(EnvSecurityScanLevel, "standard")
+}
+
+func GetSecurityReportFormat() string {
+	return GetEnvWithDefault(EnvSecurityReportFormat, "text")
+}
+
+func GetSecurityDetectCredentials() bool {
+	return GetEnvBool(EnvSecurityDetectCredentials, true)
+}
+
+func GetSecurityDetectSQLInjection() bool {
+	return GetEnvBool(EnvSecurityDetectSQLInjection, true)
+}
+
+func GetSecurityDetectXSS() bool {
+	return GetEnvBool(EnvSecurityDetectXSS, true)
+}
+
+func GetSecurityDetectPathTraversal() bool {
+	return GetEnvBool(EnvSecurityDetectPathTraversal, true)
+}
+
+func GetSecurityDetectQuality() bool {
+	return GetEnvBool(EnvSecurityDetectQuality, true)
 }
 func ApplyEnvOverrides(config map[string]interface{}) {
 	envVars := GetAllEnvVars()

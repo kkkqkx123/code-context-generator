@@ -13,6 +13,7 @@ import (
 	"code-context-generator/internal/formatter"
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/types"
+	"code-context-generator/pkg/security"
 
 	"github.com/spf13/cobra"
 )
@@ -282,6 +283,51 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		fmt.Printf("扫描完成: %d 个文件, %d 个目录\n", result.FileCount, result.FolderCount)
 	}
 
+	// 执行安全扫描
+	if cfg.Security.Enabled {
+		fmt.Println(utils.InfoColor("🔍 开始安全扫描..."))
+		securityIntegration := security.NewSecurityIntegration(&cfg.Security)
+		
+		// 收集要扫描的文件路径
+		var filesToScan []string
+		for _, file := range result.Files {
+			filesToScan = append(filesToScan, file.Path)
+		}
+		for _, folder := range result.Folders {
+			for _, file := range folder.Files {
+				filesToScan = append(filesToScan, file.Path)
+			}
+		}
+
+		securityReport, err := securityIntegration.ScanFiles(filesToScan)
+		if err != nil {
+			fmt.Printf("安全扫描失败: %v\n", err)
+		} else {
+			securityIntegration.PrintSummary(securityReport)
+			
+			// 如果启用了失败选项且有关键问题，则退出
+			if cfg.Security.FailOnCritical && securityIntegration.HasCriticalIssues(securityReport) {
+				return fmt.Errorf("发现严重安全问题，扫描终止")
+			}
+			
+			// 生成安全报告文件
+			if cfg.Security.ReportFormat != "" {
+				securityReportFile := fmt.Sprintf("security_report_%s.%s", 
+					filepath.Base(path), cfg.Security.ReportFormat)
+				if cfg.Security.ReportFormat == "text" {
+					securityReportFile = fmt.Sprintf("security_report_%s.txt", filepath.Base(path))
+				}
+				
+				err = securityIntegration.GenerateReport(securityReport, securityReportFile)
+				if err != nil {
+					fmt.Printf("生成安全报告失败: %v\n", err)
+				} else {
+					fmt.Printf("安全报告已生成: %s\n", securityReportFile)
+				}
+			}
+		}
+	}
+
 	// 创建格式化器
 	formatter, err := formatter.NewFormatter(format, cfg)
 	if err != nil {
@@ -354,6 +400,13 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		fmt.Println(utils.SuccessColor("✅ 成功生成代码上下文文件:"), defaultOutput)
 		fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", result.FileCount, result.FolderCount)
 		fmt.Printf("💾 总大小: %s\n", utils.FormatFileSize(result.TotalSize))
+	
+	// 显示安全扫描状态
+	if cfg.Security.Enabled {
+		fmt.Println(utils.SuccessColor("🔒 安全扫描已启用"))
+	} else {
+		fmt.Println(utils.InfoColor("🔓 安全扫描已禁用"))
+	}
 	}
 
 	return nil

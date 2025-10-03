@@ -10,20 +10,20 @@
 
 ```bash
 # 指定多个文件
-code-context-generator generate -m file1.go -m file2.go -m file3.go
+c-gen generate -m file1.go -m file2.go -m file3.go
 
 # 指定输出格式和文件名
-code-context-generator generate -m main.go -m utils.go -f markdown -o output.md
+c-gen generate -m main.go -m utils.go -f markdown -o output.md
 ```
 
 ### 高级用法
 
 ```bash
 # 结合模式文件过滤多个文件
-code-context-generator generate -m src/main.go -m src/utils.go -p patterns.txt
+c-gen generate -m src/main.go -m src/utils.go -p patterns.txt
 
 # 结合其他参数使用
-code-context-generator generate -m config.json -m readme.md -C -H -f json
+c-gen generate -m config.json -m readme.md -C -H -f json
 ```
 
 ### 注意事项
@@ -63,13 +63,13 @@ test_files/config.*  # Linux 格式
 
 ```bash
 # 使用模式文件过滤
-code-context-generator generate -p patterns.txt
+c-gen generate -p patterns.txt
 
 # 结合目录扫描使用
-code-context-generator generate /path/to/project -p patterns.txt
+c-gen generate /path/to/project -p patterns.txt
 
 # 结合多文件处理使用
-code-context-generator generate -m file1.go -m file2.go -p patterns.txt
+c-gen generate -m file1.go -m file2.go -p patterns.txt
 ```
 
 ### 模式文件示例
@@ -113,13 +113,13 @@ Dockerfile    # Docker 文件
 
 ```bash
 # Windows 格式
-code-context-generator generate -p patterns_windows.txt
+c-gen generate -p patterns_windows.txt
 
 # Linux 格式  
-code-context-generator generate -p patterns_linux.txt
+c-gen generate -p patterns_linux.txt
 
 # 混合格式（在同一模式文件中）
-code-context-generator generate -p patterns_mixed.txt
+c-gen generate -p patterns_mixed.txt
 ```
 
 模式文件中的路径分隔符会被自动处理，确保在不同操作系统上都能正确工作。
@@ -130,7 +130,7 @@ code-context-generator generate -p patterns_mixed.txt
 
 ```bash
 # 只处理主要的 Go 源文件
-code-context-generator generate \
+c-gen generate \
   -m main.go \
   -m cmd/server.go \
   -m internal/config/config.go \
@@ -160,14 +160,14 @@ LICENSE
 
 然后使用：
 ```bash
-code-context-generator generate /path/to/project -p core-patterns.txt -o core-docs.md
+c-gen generate /path/to/project -p core-patterns.txt -o core-docs.md
 ```
 
 ### 场景 3：多文件 + 模式文件
 
 ```bash
 # 处理多个指定文件，并用模式文件进一步过滤
-code-context-generator generate \
+c-gen generate \
   -m src/main.go \
   -m src/utils.go \
   -m src/config.json \
