@@ -11,11 +11,11 @@ type FileInfo struct {
 	Name     string    `yaml:"name" json:"name" toml:"name"`
 	Path     string    `yaml:"path" json:"path" toml:"path"`
 	Content  string    `yaml:"content" json:"content" toml:"content"`
-	Size     int64     `yaml:"size" json:"size" toml:"size"`
-	ModTime  time.Time `yaml:"mod_time" json:"mod_time" toml:"mod_time"`
-	IsDir    bool      `yaml:"is_dir" json:"is_dir" toml:"is_dir"`
-	IsHidden bool      `yaml:"is_hidden" json:"is_hidden" toml:"is_hidden"`
-	IsBinary bool      `yaml:"is_binary" json:"is_binary" toml:"is_binary"`
+	Size     int64     `yaml:"size,omitempty" json:"size,omitempty" toml:"size,omitempty"`
+	ModTime  time.Time `yaml:"mod_time,omitempty" json:"mod_time,omitempty" toml:"mod_time,omitempty"`
+	IsDir    bool      `yaml:"is_dir,omitempty" json:"is_dir,omitempty" toml:"is_dir,omitempty"`
+	IsHidden bool      `yaml:"is_hidden,omitempty" json:"is_hidden,omitempty" toml:"is_hidden,omitempty"`
+	IsBinary bool      `yaml:"is_binary,omitempty" json:"is_binary,omitempty" toml:"is_binary,omitempty"`
 }
 
 // FolderInfo 文件夹信息结构体
@@ -78,6 +78,7 @@ type FormatConfig struct {
 	Fields     map[string]string      `yaml:"fields" json:"fields" toml:"fields"`
 	Template   string                 `yaml:"template" json:"template" toml:"template"`
 	Formatting map[string]interface{} `yaml:"formatting" json:"formatting" toml:"formatting"`
+	Encoding   string                 `yaml:"encoding" json:"encoding" toml:"encoding"`
 }
 
 // XMLFormatConfig XML格式专用配置
@@ -144,6 +145,7 @@ type OutputConfig struct {
 	OutputDir        string `yaml:"output_dir" json:"output_dir" toml:"output_dir"`
 	FilenameTemplate string `yaml:"filename_template" json:"filename_template" toml:"filename_template"`
 	TimestampFormat  string `yaml:"timestamp_format" json:"timestamp_format" toml:"timestamp_format"`
+	IncludeMetadata  bool   `yaml:"include_metadata" json:"include_metadata" toml:"include_metadata"`
 }
 
 // UIConfig 界面配置

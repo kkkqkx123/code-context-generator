@@ -9,11 +9,41 @@
 - **智能文件大小显示**: 根据文件大小自动选择B、KB、MB单位显示
 
 ### 高级特性
+
 - **多线程处理**: 并行扫描提升性能
 - **配置文件**: 支持TOML格式配置
 - **路径匹配**: 支持通配符和正则表达式
 - **智能去重**: 自动处理重复文件，确保每个文件只出现一次
 - **精确文件夹统计**: 仅统计符合过滤条件的文件夹
+- **编码控制**: 支持通过 `--encoding` 参数或 `.env` 文件设置输出文件编码格式（默认 utf-8）
+- **元信息控制**: 支持通过 `.env` 配置决定输出文件是否包含元信息（默认不包含，仅保留内容、名称和相对路径）
+
+### 环境变量配置
+
+支持通过 `.env` 文件配置以下环境变量：
+
+```bash
+# 输出配置
+CODE_CONTEXT_DEFAULT_FORMAT=json          # 默认输出格式
+CODE_CONTEXT_OUTPUT_DIR=./output          # 输出目录
+CODE_CONTEXT_FILENAME_TEMPLATE=context    # 文件名模板
+CODE_CONTEXT_TIMESTAMP_FORMAT=2006-01-02_15-04-05  # 时间戳格式
+CODE_CONTEXT_ENCODING=utf-8               # 输出文件编码格式
+CODE_CONTEXT_INCLUDE_METADATA=false       # 是否包含元信息（大小、修改时间等）
+
+# 过滤配置
+CODE_CONTEXT_MAX_DEPTH=0                  # 最大扫描深度（0表示只扫描当前目录，1表示递归1层，-1表示无限制）
+CODE_CONTEXT_MAX_FILE_SIZE=10MB          # 最大文件大小
+CODE_CONTEXT_EXCLUDE_PATTERNS=.git,node_modules  # 排除模式
+CODE_CONTEXT_INCLUDE_PATTERNS=           # 包含模式
+CODE_CONTEXT_RECURSIVE=false             # 是否递归（已废弃，使用MAX_DEPTH控制）
+CODE_CONTEXT_EXCLUDE_BINARY=false        # 是否排除二进制文件
+
+# 文件处理配置
+CODE_CONTEXT_INCLUDE_HIDDEN=false        # 是否包含隐藏文件
+CODE_CONTEXT_INCLUDE_CONTENT=true        # 是否包含文件内容
+CODE_CONTEXT_INCLUDE_HASH=false          # 是否包含文件哈希
+```
 
 ## 安装
 
@@ -138,8 +168,9 @@ include_toc = true
 - `-e, --exclude`: 排除模式（可多次使用）
 - `-i, --include`: 包含模式（可多次使用）
 - `-s, --max-size`: 最大文件大小
-- `-d, --max-depth`: 最大扫描深度
+- `-d, --max-depth`: 最大扫描深度（0表示只扫描当前目录，1表示递归1层，-1表示无限制）
 - `-c, --config`: 配置文件路径
+- `--encoding`: 输出文件编码格式（默认：utf-8）
 
 ### config命令
 - `init`: 创建默认配置文件

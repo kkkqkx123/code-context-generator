@@ -79,6 +79,11 @@ func main() {
 
 	// 创建文件系统遍历器
 	walker := filesystem.NewWalker()
+	
+	// 设置walker的配置
+	if fsWalker, ok := walker.(*filesystem.FileSystemWalker); ok {
+		fsWalker.SetConfig(cm.Get())
+	}
 
 	// 设置遍历选项
 	walkOptions := &types.WalkOptions{

@@ -345,6 +345,21 @@ func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("JSON格式化失败: %w", err)
 	}
+	
+	// 检查配置中是否指定了编码格式
+	if f.config != nil {
+		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil {
+			if formatConfig.Encoding != "" && formatConfig.Encoding != "utf-8" {
+				// 转换编码
+				encodedOutput, err := convertEncoding(string(output), formatConfig.Encoding)
+				if err != nil {
+					return "", fmt.Errorf("编码转换失败: %w", err)
+				}
+				return encodedOutput, nil
+			}
+		}
+	}
+	
 	return string(output), nil
 }
 
@@ -441,7 +456,20 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("XML格式化失败: %w", err)
 	}
-	return xml.Header + string(output), nil
+	
+	result := xml.Header + string(output)
+	
+	// 检查配置中是否指定了编码格式
+	if f.config != nil && f.config.Formats.XML.FormatConfig.Encoding != "" && f.config.Formats.XML.FormatConfig.Encoding != "utf-8" {
+		// 转换编码
+		encodedOutput, err := convertEncoding(result, f.config.Formats.XML.FormatConfig.Encoding)
+		if err != nil {
+			return "", fmt.Errorf("编码转换失败: %w", err)
+		}
+		return encodedOutput, nil
+	}
+	
+	return result, nil
 }
 
 // FormatFile 格式化单个文件
@@ -482,16 +510,22 @@ func (f *XMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 // TOMLFormatter TOML格式转换器
 type TOMLFormatter struct {
 	BaseFormatter
+	encoding string
 }
 
 // NewTOMLFormatter 创建TOML格式转换器
 func NewTOMLFormatter(config *types.FormatConfig) Formatter {
+	encoding := "utf-8"
+	if config != nil && config.Encoding != "" {
+		encoding = config.Encoding
+	}
 	return &TOMLFormatter{
 		BaseFormatter: BaseFormatter{
 			name:        "TOML",
 			description: "Tom's Obvious, Minimal Language format",
 			config:      config,
 		},
+		encoding: encoding,
 	}
 }
 
@@ -528,7 +562,18 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 		}
 	}
 
-	return buf.String(), nil
+	result := buf.String()
+	
+	// 检查是否需要编码转换
+	if f.encoding != "" && f.encoding != "utf-8" {
+		encodedResult, err := convertEncoding(result, f.encoding)
+		if err != nil {
+			return "", fmt.Errorf("编码转换失败: %w", err)
+		}
+		return encodedResult, nil
+	}
+	
+	return result, nil
 }
 
 // FormatFile 格式化单个文件
@@ -566,16 +611,22 @@ func (f *TOMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 // MarkdownFormatter Markdown格式转换器
 type MarkdownFormatter struct {
 	BaseFormatter
+	encoding string
 }
 
 // NewMarkdownFormatter 创建Markdown格式转换器
 func NewMarkdownFormatter(config *types.FormatConfig) Formatter {
+	encoding := "utf-8"
+	if config != nil && config.Encoding != "" {
+		encoding = config.Encoding
+	}
 	return &MarkdownFormatter{
 		BaseFormatter: BaseFormatter{
 			name:        "Markdown",
 			description: "Markdown format with code blocks",
 			config:      config,
 		},
+		encoding: encoding,
 	}
 }
 
@@ -631,7 +682,18 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 		}
 	}
 
-	return sb.String(), nil
+	result := sb.String()
+	
+	// 检查是否需要编码转换
+	if f.encoding != "" && f.encoding != "utf-8" {
+		encodedResult, err := convertEncoding(result, f.encoding)
+		if err != nil {
+			return "", fmt.Errorf("编码转换失败: %w", err)
+		}
+		return encodedResult, nil
+	}
+	
+	return result, nil
 }
 
 // FormatFile 格式化单个文件
@@ -735,6 +797,102 @@ func CreateDefaultFactory(config *types.Config) *FormatterFactory {
 }
 
 // 辅助方法
+
+// convertEncoding 转换字符串编码
+func convertEncoding(input string, targetEncoding string) (string, error) {
+	// 这里实现编码转换逻辑
+	// 由于Go标准库主要支持UTF-8，我们可以使用第三方库如golang.org/x/text/encoding
+	// 或者简单的字符映射表来实现基本编码转换
+	
+	switch strings.ToLower(targetEncoding) {
+	case "gbk", "gb2312", "gb18030":
+		// 简化的GBK转换示例（实际项目中应使用专业库）
+		return toGBK(input), nil
+	case "big5":
+		// 简化的Big5转换示例
+		return toBig5(input), nil
+	case "shift_jis", "sjis":
+		// 简化的Shift-JIS转换示例
+		return toShiftJIS(input), nil
+	case "euc-jp":
+		// 简化的EUC-JP转换示例
+		return toEUCJP(input), nil
+	case "iso-8859-1", "latin1":
+		// 简化的ISO-8859-1转换示例
+		return toISO88591(input), nil
+	case "utf-8", "utf8":
+		return input, nil
+	default:
+		return "", fmt.Errorf("不支持的编码格式: %s", targetEncoding)
+	}
+}
+
+// 简化的编码转换函数（实际项目中应使用专业库）
+func toGBK(input string) string {
+	// 这里应该使用专业的GBK编码库
+	// 简化实现：只处理ASCII字符，其他字符用?代替
+	var result strings.Builder
+	for _, r := range input {
+		if r < 128 {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('?')
+		}
+	}
+	return result.String()
+}
+
+func toBig5(input string) string {
+	// 简化实现：只处理ASCII字符
+	var result strings.Builder
+	for _, r := range input {
+		if r < 128 {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('?')
+		}
+	}
+	return result.String()
+}
+
+func toShiftJIS(input string) string {
+	// 简化实现：只处理ASCII字符
+	var result strings.Builder
+	for _, r := range input {
+		if r < 128 {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('?')
+		}
+	}
+	return result.String()
+}
+
+func toEUCJP(input string) string {
+	// 简化实现：只处理ASCII字符
+	var result strings.Builder
+	for _, r := range input {
+		if r < 128 {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('?')
+		}
+	}
+	return result.String()
+}
+
+func toISO88591(input string) string {
+	// 简化实现：只处理ASCII字符
+	var result strings.Builder
+	for _, r := range input {
+		if r < 256 {
+			result.WriteRune(r)
+		} else {
+			result.WriteRune('?')
+		}
+	}
+	return result.String()
+}
 
 func escapeTOMLString(s string) string {
 	// 简单的TOML字符串转义

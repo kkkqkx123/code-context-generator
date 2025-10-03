@@ -117,11 +117,12 @@ func init() {
 	// max-depth = 1: 递归1层
 	// max-depth = -1 或很大值: 无限递归
 	rootCmd.Flags().Bool("hidden", false, "包含隐藏文件")
-	rootCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示无限制)")
+	rootCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示只扫描当前目录，1表示递归1层，-1表示无限制)")
 	rootCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
 	rootCmd.Flags().BoolP("content", "C", true, "包含文件内容")
 	rootCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
 	rootCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
+	rootCmd.Flags().String("encoding", "utf-8", "输出文件编码格式")
 	rootCmd.Flags().StringSliceP("multiple-files", "m", []string{}, "多个文件路径（可多次使用）")
 	rootCmd.Flags().StringP("pattern-file", "p", "", "从文件读取模式（支持.gitignore格式，兼容Windows/Linux路径分隔符）")
 
@@ -132,11 +133,12 @@ func init() {
 	generateCmd.Flags().StringSliceP("include", "i", []string{}, "包含的文件/目录模式")
 	// 注意：recursive 参数已被移除，使用 max-depth 控制递归行为
 	generateCmd.Flags().Bool("hidden", false, "包含隐藏文件")
-	generateCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示无限制)")
+	generateCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示只扫描当前目录，1表示递归1层，-1表示无限制)")
 	generateCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
 	generateCmd.Flags().BoolP("content", "C", true, "包含文件内容")
 	generateCmd.Flags().BoolP("hash", "H", false, "包含文件哈希")
 	generateCmd.Flags().Bool("exclude-binary", true, "排除二进制文件")
+	generateCmd.Flags().String("encoding", "utf-8", "输出文件编码格式")
 	generateCmd.Flags().StringSliceP("multiple-files", "m", []string{}, "多个文件路径（可多次使用）")
 	generateCmd.Flags().StringP("pattern-file", "p", "", "从文件读取模式（支持.gitignore格式，兼容Windows/Linux路径分隔符）")
 }
@@ -163,6 +165,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	content, _ := cmd.Flags().GetBool("content")
 	hash, _ := cmd.Flags().GetBool("hash")
 	excludeBinary, _ := cmd.Flags().GetBool("exclude-binary")
+	encoding, _ := cmd.Flags().GetString("encoding")
 	multipleFiles, _ := cmd.Flags().GetStringSlice("multiple-files")
 	patternFile, _ := cmd.Flags().GetString("pattern-file")
 
@@ -211,6 +214,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	if !excludeBinary && cfg.Filters.ExcludeBinary {
 		excludeBinary = cfg.Filters.ExcludeBinary
 	}
+	
+	// 应用编码设置（命令行参数优先）
+	if encoding != "" && encoding != "utf-8" {
+		cfg.Output.Encoding = encoding
+	}
 
 	// 验证格式
 	if !isValidFormat(format) {
@@ -219,6 +227,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// 创建文件系统遍历器
 	walker := filesystem.NewFileSystemWalker(types.WalkOptions{})
+	
+	// 设置walker的配置
+	if fsWalker, ok := walker.(*filesystem.FileSystemWalker); ok {
+		fsWalker.SetConfig(cfg)
+	}
 
 	// 新的max-depth逻辑：
 	// 0: 只扫描当前目录（不递归）

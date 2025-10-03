@@ -1,0 +1,39 @@
+{
+  "XMLName": {
+    "Space": "",
+    "Local": "context"
+  },
+  "file": "file",
+  "file_count": 1,
+  "files": {
+    "file": [
+      {
+        "name": "test1.txt",
+        "path": "test_dir\\test1.txt",
+        "content": "test content\r\n",
+        "size": 30,
+        "mod_time": "2025-10-03T18:25:50.9139413+08:00",
+        "is_dir": false,
+        "is_hidden": false,
+        "is_binary": false
+      }
+    ]
+  },
+  "folder": "folder",
+  "folder_count": 1,
+  "folders": {
+    "folder": [
+      {
+        "name": "test_dir",
+        "path": "test_dir",
+        "files": [],
+        "folders": null,
+        "mod_time": "2025-10-03T18:25:50.9197701+08:00",
+        "is_hidden": false,
+        "size": 0,
+        "count": 2
+      }
+    ]
+  },
+  "total_size": 30
+}

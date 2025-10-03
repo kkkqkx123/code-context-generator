@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/types"
@@ -30,15 +31,25 @@ func (w *FileSystemWalker) GetFileInfo(path string) (*types.FileInfo, error) {
 		content = fileContent
 	}
 
-	return &types.FileInfo{
+	// 检查是否为隐藏文件
+	isHidden := strings.HasPrefix(filepath.Base(path), ".")
+
+	fileInfo := &types.FileInfo{
 		Path:     path,
 		Name:     info.Name(),
-		Size:     info.Size(),
-		ModTime:  info.ModTime(),
-		IsDir:    info.IsDir(),
 		Content:  content,
-		IsBinary: isBinary,
-	}, nil
+	}
+
+	// 只有在配置启用元信息时才填充元信息字段
+	if w.config != nil && w.config.Output.IncludeMetadata {
+		fileInfo.Size = info.Size()
+		fileInfo.ModTime = info.ModTime()
+		fileInfo.IsDir = info.IsDir()
+		fileInfo.IsHidden = isHidden
+		fileInfo.IsBinary = isBinary
+	}
+
+	return fileInfo, nil
 }
 
 // GetFolderInfo 获取文件夹信息

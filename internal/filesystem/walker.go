@@ -22,6 +22,7 @@ type Walker interface {
 	GetFolderInfo(path string) (*types.FolderInfo, error)
 	FilterFiles(files []string, patterns []string) []string
 	FilterBySize(path string, maxSize int64) bool
+	SetConfig(config *types.Config)
 }
 
 // FileSystemWalker 文件系统遍历器实现
@@ -31,6 +32,7 @@ type FileSystemWalker struct {
 	maxFileCount int
 	maxDepth     int
 	timeout      time.Duration
+	config       *types.Config // 添加配置引用
 }
 
 // NewWalker 创建遍历器
@@ -40,6 +42,7 @@ func NewWalker() Walker {
 		maxFileCount: 1000,             // 限制最大文件数量
 		maxDepth:     5,                // 限制最大深度
 		timeout:      30 * time.Second, // 30秒超时
+		config:       nil,              // 默认无配置
 	}
 }
 
@@ -50,7 +53,15 @@ func NewFileSystemWalker(options types.WalkOptions) Walker {
 		maxFileCount: 1000,             // 限制最大文件数量
 		maxDepth:     5,                // 限制最大深度
 		timeout:      30 * time.Second, // 30秒超时
+		config:       nil,              // 默认无配置
 	}
+}
+
+// SetConfig 设置配置
+func (w *FileSystemWalker) SetConfig(config *types.Config) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.config = config
 }
 
 // Walk 遍历文件系统
@@ -176,7 +187,10 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 				if !fileExists {
 					contextData.Files = append(contextData.Files, *fileInfo)
 					contextData.FileCount++
-					contextData.TotalSize += fileInfo.Size
+					// 只有在包含元信息时才累加文件大小
+					if w.config != nil && w.config.Output.IncludeMetadata {
+						contextData.TotalSize += fileInfo.Size
+					}
 				}
 				mu.Unlock()
 
@@ -234,9 +248,13 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 					}
 
 					mu.Lock()
-					contextData.Folders = append(contextData.Folders, *folderInfo)
-					contextData.FolderCount++
-					mu.Unlock()
+				contextData.Folders = append(contextData.Folders, *folderInfo)
+				contextData.FolderCount++
+				// 只有在包含元信息时才累加文件夹大小
+				if w.config != nil && w.config.Output.IncludeMetadata {
+					contextData.TotalSize += folderInfo.Size
+				}
+				mu.Unlock()
 				}
 			}
 		}

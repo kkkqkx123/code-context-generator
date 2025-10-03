@@ -173,6 +173,8 @@ func (cm *ConfigManager) GetEnvOverrides() map[string]string {
 		env.EnvFollowSymlinks:   "follow_symlinks",
 		env.EnvExcludeBinary:    "exclude_binary",
 		env.EnvExcludePatterns:  "exclude_patterns",
+		env.EnvEncoding:         "encoding",
+		env.EnvIncludeMetadata:  "include_metadata",
 	}
 
 	for envKey, fieldName := range mapping {
@@ -224,6 +226,14 @@ func (cm *ConfigManager) applyEnvOverrides(config *types.Config) {
 
 	// 应用排除二进制文件覆盖
 	config.Filters.ExcludeBinary = env.GetExcludeBinary()
+	
+	// 应用编码覆盖
+	if encoding := env.GetEncoding(); encoding != "" {
+		config.Output.Encoding = encoding
+	}
+	
+	// 应用元信息开关覆盖
+	config.Output.IncludeMetadata = env.GetIncludeMetadata()
 	
 	// 注意：recursive 环境变量已被移除，使用 max_depth 控制递归行为
 }
@@ -675,28 +685,17 @@ func GetDefaultConfig() *types.Config {
 		},
 		Filters: types.FiltersConfig{
 			MaxFileSize:     "10MB",
-			ExcludePatterns: constants.DefaultExcludePatterns,
+			ExcludePatterns: []string{".git", "node_modules", "*.exe", "*.dll"},
 			IncludePatterns: []string{},
-			MaxDepth:        constants.DefaultMaxDepth,
+			MaxDepth:        0,
 			FollowSymlinks:  false,
-			ExcludeBinary:   false, // 改为不排除二进制文件，让它们显示为[二进制文件]
+			ExcludeBinary:   false,
 		},
 		Output: types.OutputConfig{
-			DefaultFormat:    constants.DefaultFormat,
-			OutputDir:        constants.DefaultOutputDir,
-			FilenameTemplate: constants.DefaultFilenameTemplate,
-			TimestampFormat:  constants.DefaultTimestampFormat,
-		},
-		UI: types.UIConfig{
-			Selector: struct {
-				ShowHidden   bool `yaml:"show_hidden" json:"show_hidden" toml:"show_hidden"`
-				ShowSize     bool `yaml:"show_size" json:"show_size" toml:"show_size"`
-				ShowModified bool `yaml:"show_modified" json:"show_modified" toml:"show_modified"`
-			}{
-				ShowHidden:   constants.DefaultShowHidden,
-				ShowSize:     constants.DefaultShowSize,
-				ShowModified: constants.DefaultShowModified,
-			},
+			Format:           "json",
+			OutputDir:        "./output",
+			Encoding:         "utf-8",
+			IncludeMetadata:  false,
 		},
 	}
 }

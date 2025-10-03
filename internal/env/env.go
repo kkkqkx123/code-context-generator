@@ -29,6 +29,10 @@ const (
 	EnvFollowSymlinks  = constants.EnvPrefix + "FOLLOW_SYMLINKS"
 	EnvExcludeBinary   = constants.EnvPrefix + "EXCLUDE_BINARY"
 	EnvExcludePatterns = constants.EnvPrefix + "EXCLUDE_PATTERNS"
+	
+	// 输出配置
+	EnvEncoding         = constants.EnvPrefix + "ENCODING"
+	EnvIncludeMetadata  = constants.EnvPrefix + "INCLUDE_METADATA"
 )
 
 // LoadEnv 加载.env文件到环境变量中
@@ -146,6 +150,8 @@ func GetAllEnvVars() map[string]string {
 	envVars[EnvOutputDir] = GetEnvWithDefault(EnvOutputDir, "")
 	envVars[EnvFilenameTemplate] = GetEnvWithDefault(EnvFilenameTemplate, "")
 	envVars[EnvTimestampFormat] = GetEnvWithDefault(EnvTimestampFormat, "")
+	envVars[EnvEncoding] = GetEnvWithDefault(EnvEncoding, "utf-8")
+	envVars[EnvIncludeMetadata] = strconv.FormatBool(GetEnvBool(EnvIncludeMetadata, false))
 	
 	// 文件处理配置
 	envVars[EnvMaxFileSize] = GetEnvWithDefault(EnvMaxFileSize, "")
@@ -207,6 +213,16 @@ func GetFollowSymlinks() bool {
 // 获取是否排除二进制文件配置
 func GetExcludeBinary() bool {
 	return GetEnvBool(EnvExcludeBinary, true)
+}
+
+// 获取编码配置
+func GetEncoding() string {
+	return GetEnvWithDefault(EnvEncoding, "utf-8")
+}
+
+// 获取是否包含元信息配置
+func GetIncludeMetadata() bool {
+	return GetEnvBool(EnvIncludeMetadata, false)
 }
 
 // 获取排除模式配置
