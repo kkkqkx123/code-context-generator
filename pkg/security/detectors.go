@@ -99,9 +99,8 @@ func (d *SQLInjectionDetector) Detect(filePath string, content string) []types.S
 	var issues []types.SecurityIssue
 
 	patterns := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE).*\+.*\$`),
+		regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE).*\+.*`),
 		regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE).*fmt\.Sprintf`),
-		regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE).*\+.*request\.`),
 		regexp.MustCompile(`(?i)query\(.*\+.*`),
 		regexp.MustCompile(`(?i)exec\(.*\+.*`),
 	}
@@ -110,19 +109,30 @@ func (d *SQLInjectionDetector) Detect(filePath string, content string) []types.S
 	for lineNum, line := range lines {
 		for _, pattern := range patterns {
 			if pattern.MatchString(line) {
-				issue := types.SecurityIssue{
-					ID:             "SQL_INJECTION_001",
-					Type:           "SQLInjection",
-					Severity:       types.SeverityHigh,
-					Message:        "检测到可能的SQL注入漏洞",
-					File:           filePath,
-					Line:           lineNum + 1,
-					Column:         strings.Index(line, pattern.FindString(line)) + 1,
-					Snippet:        strings.TrimSpace(line),
-					Recommendation: "使用参数化查询或预编译语句来防止SQL注入",
-					Confidence:     0.75,
+				// 检查是否已经被其他模式匹配过
+				alreadyMatched := false
+				for _, existingIssue := range issues {
+					if existingIssue.Line == lineNum+1 {
+						alreadyMatched = true
+						break
+					}
 				}
-				issues = append(issues, issue)
+				
+				if !alreadyMatched {
+					issue := types.SecurityIssue{
+						ID:             "SQL_INJECTION_001",
+						Type:           "SQLInjection",
+						Severity:       types.SeverityHigh,
+						Message:        "检测到可能的SQL注入漏洞",
+						File:           filePath,
+						Line:           lineNum + 1,
+						Column:         strings.Index(line, pattern.FindString(line)) + 1,
+						Snippet:        strings.TrimSpace(line),
+						Recommendation: "使用参数化查询或预编译语句来防止SQL注入",
+						Confidence:     0.75,
+					}
+					issues = append(issues, issue)
+				}
 			}
 		}
 	}
@@ -271,23 +281,21 @@ func (d *QualityDetector) Detect(filePath string, content string) []types.Securi
 			}
 		}
 
-		// 检测空的错误处理
-		if strings.Contains(line, "err != nil") && !strings.Contains(line, "//") {
-			if !strings.Contains(line, "if") || !strings.Contains(line, "{") {
-				issue := types.SecurityIssue{
-					ID:             "QUALITY_002",
-					Type:           "IncompleteErrorHandling",
-					Severity:       types.SeverityMedium,
-					Message:        "检测到不完整的错误处理",
-					File:           filePath,
-					Line:           lineNum + 1,
-					Column:         1,
-					Snippet:        strings.TrimSpace(line),
-					Recommendation: "确保错误被正确处理，避免忽略错误",
-					Confidence:     0.70,
-				}
-				issues = append(issues, issue)
+		// 检测空的错误处理 - 检测注释掉的错误处理
+		if strings.Contains(line, "err != nil") && strings.Contains(line, "//") {
+			issue := types.SecurityIssue{
+				ID:             "QUALITY_002",
+				Type:           "IncompleteErrorHandling",
+				Severity:       types.SeverityMedium,
+				Message:        "检测到不完整的错误处理",
+				File:           filePath,
+				Line:           lineNum + 1,
+				Column:         1,
+				Snippet:        strings.TrimSpace(line),
+				Recommendation: "确保错误被正确处理，避免忽略错误",
+				Confidence:     0.70,
 			}
+			issues = append(issues, issue)
 		}
 	}
 

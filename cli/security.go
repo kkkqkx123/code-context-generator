@@ -169,16 +169,7 @@ func createSecurityConfig(
 	detectCredentials, detectSQLInjection, detectXSS, detectPathTraversal, detectQuality bool,
 	excludeFiles, excludePatterns []string,
 ) *types.SecurityConfig {
-	// 解析扫描级别
-	var scanLevel types.ScanLevel
-	switch scanLevelStr {
-	case "basic":
-		scanLevel = types.ScanLevelBasic
-	case "comprehensive":
-		scanLevel = types.ScanLevelComprehensive
-	default:
-		scanLevel = types.ScanLevelStandard
-	}
+	// 扫描级别字符串直接使用
 
 	// 创建检测器配置
 	detectorConfig := types.DetectorConfig{

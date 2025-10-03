@@ -294,33 +294,12 @@ func main() {
 		Enabled:        true,
 		FailOnCritical: false,
 		ScanLevel:      "standard",
-		ReportFormat:   "text",
 		Detectors: types.DetectorConfig{
-			HardcodedCredentials: types.HardcodedCredentialsConfig{
-				Enabled:          true,
-				SeverityThreshold: types.SeverityLow,
-				Patterns:         []string{},
-			},
-			SQLInjection: types.VulnerabilityConfig{
-				Enabled:          true,
-				SeverityThreshold: types.SeverityLow,
-			},
-			XSSVulnerabilities: types.VulnerabilityConfig{
-				Enabled:          true,
-				SeverityThreshold: types.SeverityLow,
-			},
-			PathTraversal: types.VulnerabilityConfig{
-				Enabled:          true,
-				SeverityThreshold: types.SeverityLow,
-			},
-			UnusedVariables: types.QualityConfig{
-				Enabled:          true,
-				SeverityThreshold: types.SeverityLow,
-			},
-			ErrorHandling: types.QualityConfig{
-				Enabled:          true,
-				SeverityThreshold: types.SeverityLow,
-			},
+			Credentials:   true,
+			SQLInjection:  true,
+			XSS:           true,
+			PathTraversal: true,
+			Quality:       true,
 		},
 		Exclusions: types.ExclusionConfig{
 			Files:    []string{},
