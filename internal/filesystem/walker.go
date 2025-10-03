@@ -132,7 +132,11 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 		}
 
 		depth := strings.Count(relPath, string(os.PathSeparator))
-		if options.MaxDepth > 0 && depth >= options.MaxDepth {
+		// 新的max-depth逻辑：
+		// 0: 只扫描当前目录（不递归）
+		// 1: 递归1层
+		// -1: 无限递归
+		if options.MaxDepth >= 0 && depth > options.MaxDepth {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -160,9 +164,20 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 				}
 
 				mu.Lock()
-				contextData.Files = append(contextData.Files, *fileInfo)
-				contextData.FileCount++
-				contextData.TotalSize += fileInfo.Size
+				// 检查文件是否已经存在，避免重复
+				fileExists := false
+				for _, existingFile := range contextData.Files {
+					if existingFile.Path == fileInfo.Path {
+						fileExists = true
+						break
+					}
+				}
+				
+				if !fileExists {
+					contextData.Files = append(contextData.Files, *fileInfo)
+					contextData.FileCount++
+					contextData.TotalSize += fileInfo.Size
+				}
 				mu.Unlock()
 
 				// 更新进度
@@ -176,20 +191,53 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 				}
 			}(path, rootPath)
 		} else if info.IsDir() {
-			// 处理文件夹
+			// 处理文件夹 - 只统计符合过滤条件的文件夹
 			if path != rootPath { // 跳过根路径
-				folderInfo, err := w.GetFolderInfo(path)
-				if err != nil {
-					mu.Lock()
-					walkErrors = append(walkErrors, fmt.Errorf("获取文件夹信息失败 %s: %w", path, err))
-					mu.Unlock()
-					return nil
+				// 检查文件夹是否应该被包含（基于排除模式）
+				shouldInclude := true
+				if len(options.ExcludePatterns) > 0 {
+					folderName := filepath.Base(path)
+					relPath, _ := filepath.Rel(rootPath, path)
+					relPath = filepath.ToSlash(relPath)
+					
+					for _, pattern := range options.ExcludePatterns {
+						// 检查文件夹名是否匹配排除模式
+						if matched, _ := filepath.Match(pattern, folderName); matched {
+							shouldInclude = false
+							break
+						}
+						// 检查相对路径是否匹配排除模式
+						if strings.Contains(pattern, "/") {
+							if matched, _ := filepath.Match(pattern, relPath); matched {
+								shouldInclude = false
+								break
+							}
+							// 对于目录模式（以/结尾），检查当前文件夹是否匹配
+							if strings.HasSuffix(pattern, "/") {
+								dirPattern := strings.TrimSuffix(pattern, "/")
+								if matched, _ := filepath.Match(dirPattern, folderName); matched {
+									shouldInclude = false
+									break
+								}
+							}
+						}
+					}
 				}
+				
+				if shouldInclude {
+					folderInfo, err := w.GetFolderInfo(path)
+					if err != nil {
+						mu.Lock()
+						walkErrors = append(walkErrors, fmt.Errorf("获取文件夹信息失败 %s: %w", path, err))
+						mu.Unlock()
+						return nil
+					}
 
-				mu.Lock()
-				contextData.Folders = append(contextData.Folders, *folderInfo)
-				contextData.FolderCount++
-				mu.Unlock()
+					mu.Lock()
+					contextData.Folders = append(contextData.Folders, *folderInfo)
+					contextData.FolderCount++
+					mu.Unlock()
+				}
 			}
 		}
 
@@ -344,9 +392,15 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 	contextData.Folders = []types.FolderInfo{}
 	contextData.Metadata = make(map[string]interface{})
 
+	// 用于跟踪已处理的文件夹，避免重复
+	processedFolders := make(map[string]bool)
+
 	// 过滤并处理指定的文件
 	processedFiles := 0
 	totalFiles := len(files)
+	
+	// 用于跟踪已处理的文件，避免重复
+	processedFilesMap := make(map[string]bool)
 
 	for _, filePath := range files {
 		// 验证文件存在
@@ -358,6 +412,15 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 		// 只处理文件，跳过目录
 		if info.IsDir() {
 			continue
+		}
+
+		// 检查文件是否已经处理过（去重）
+		absPath, err := filepath.Abs(filePath)
+		if err != nil {
+			continue
+		}
+		if processedFilesMap[absPath] {
+			continue // 跳过已处理的文件
 		}
 
 		// 检查是否应该包含此文件
@@ -374,7 +437,42 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 		contextData.Files = append(contextData.Files, *fileInfo)
 		contextData.FileCount++
 		contextData.TotalSize += fileInfo.Size
+		processedFilesMap[absPath] = true
 		processedFiles++
+
+		// 获取文件所在目录的路径
+		dirPath := filepath.Dir(filePath)
+		
+		// 如果目录还未处理过，添加文件夹信息
+		if !processedFolders[dirPath] {
+			// 获取目录信息
+			dirInfo, err := os.Stat(dirPath)
+			if err == nil && dirInfo.IsDir() {
+				// 获取目录中的文件列表（用于计算文件数量）
+				filesInDir, _ := os.ReadDir(dirPath)
+				fileCount := 0
+				for _, entry := range filesInDir {
+					if !entry.IsDir() {
+						fileCount++
+					}
+				}
+
+				folderInfo := types.FolderInfo{
+					Name:     filepath.Base(dirPath),
+					Path:     dirPath,
+					Files:    []types.FileInfo{}, // 这里不填充具体文件，保持简洁
+					Folders:  nil,
+					ModTime:  dirInfo.ModTime(),
+					IsHidden: strings.HasPrefix(filepath.Base(dirPath), "."),
+					Size:     0, // 目录大小计算复杂，这里设为0
+					Count:    fileCount,
+				}
+				
+				contextData.Folders = append(contextData.Folders, folderInfo)
+				contextData.FolderCount++
+				processedFolders[dirPath] = true
+			}
+		}
 
 		// 更新进度
 		if progressCallback != nil {

@@ -24,7 +24,7 @@ const (
 	// 文件处理配置
 	EnvMaxFileSize     = constants.EnvPrefix + "MAX_FILE_SIZE"
 	EnvMaxDepth        = constants.EnvPrefix + "MAX_DEPTH"
-	EnvRecursive       = constants.EnvPrefix + "RECURSIVE"
+	// EnvRecursive       = constants.EnvPrefix + "RECURSIVE" // 已移除recursive参数
 	EnvIncludeHidden   = constants.EnvPrefix + "INCLUDE_HIDDEN"
 	EnvFollowSymlinks  = constants.EnvPrefix + "FOLLOW_SYMLINKS"
 	EnvExcludeBinary   = constants.EnvPrefix + "EXCLUDE_BINARY"
@@ -150,7 +150,7 @@ func GetAllEnvVars() map[string]string {
 	// 文件处理配置
 	envVars[EnvMaxFileSize] = GetEnvWithDefault(EnvMaxFileSize, "")
 	envVars[EnvMaxDepth] = GetEnvWithDefault(EnvMaxDepth, "")
-	envVars[EnvRecursive] = strconv.FormatBool(GetEnvBool(EnvRecursive, false))
+	// envVars[EnvRecursive] = strconv.FormatBool(GetEnvBool(EnvRecursive, false)) // 已移除recursive参数
 	envVars[EnvIncludeHidden] = strconv.FormatBool(GetEnvBool(EnvIncludeHidden, false))
 	envVars[EnvFollowSymlinks] = strconv.FormatBool(GetEnvBool(EnvFollowSymlinks, false))
 	envVars[EnvExcludeBinary] = strconv.FormatBool(GetEnvBool(EnvExcludeBinary, true))
@@ -189,10 +189,10 @@ func GetMaxDepth() int {
 	return GetEnvInt(EnvMaxDepth, 0)
 }
 
-// 获取是否递归配置
-func GetRecursive() bool {
-	return GetEnvBool(EnvRecursive, false)
-}
+// 获取是否递归配置 - 已移除，使用max-depth代替
+// func GetRecursive() bool {
+// 	return GetEnvBool(EnvRecursive, false)
+// }
 
 // 获取是否包含隐藏文件配置
 func GetIncludeHidden() bool {

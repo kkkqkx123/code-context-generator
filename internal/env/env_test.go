@@ -446,7 +446,6 @@ func TestGetAllEnvVars(t *testing.T) {
 		EnvTimestampFormat,
 		EnvMaxFileSize,
 		EnvMaxDepth,
-		EnvRecursive,
 		EnvIncludeHidden,
 		EnvFollowSymlinks,
 		EnvExcludeBinary,
@@ -473,7 +472,6 @@ func TestGetAllEnvVars(t *testing.T) {
 	os.Setenv(EnvOutputDir, "/tmp/output")
 	os.Setenv(EnvMaxFileSize, "20MB")
 	os.Setenv(EnvMaxDepth, "5")
-	os.Setenv(EnvRecursive, "true")
 	os.Setenv(EnvIncludeHidden, "true")
 	os.Setenv(EnvFollowSymlinks, "true")
 	os.Setenv(EnvExcludeBinary, "false")
@@ -496,10 +494,6 @@ func TestGetAllEnvVars(t *testing.T) {
 
 	if result[EnvMaxDepth] != "5" {
 		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvMaxDepth, result[EnvMaxDepth], "5")
-	}
-
-	if result[EnvRecursive] != "true" {
-		t.Errorf("GetAllEnvVars()[%s] = %v, 期望 %v", EnvRecursive, result[EnvRecursive], "true")
 	}
 
 	if result[EnvIncludeHidden] != "true" {
@@ -578,7 +572,6 @@ func TestConfigGetterFunctions(t *testing.T) {
 		EnvTimestampFormat,
 		EnvMaxFileSize,
 		EnvMaxDepth,
-		EnvRecursive,
 		EnvIncludeHidden,
 		EnvFollowSymlinks,
 		EnvExcludeBinary,
@@ -645,7 +638,6 @@ func TestConfigGetterFunctions(t *testing.T) {
 
 	// 测试布尔配置获取函数
 	t.Run("布尔配置获取", func(t *testing.T) {
-		os.Setenv(EnvRecursive, "true")
 		os.Setenv(EnvIncludeHidden, "false")
 		os.Setenv(EnvFollowSymlinks, "true")
 		os.Setenv(EnvExcludeBinary, "false")
@@ -655,7 +647,6 @@ func TestConfigGetterFunctions(t *testing.T) {
 			function func() bool
 			expected bool
 		}{
-			{"GetRecursive", GetRecursive, true},
 			{"GetIncludeHidden", GetIncludeHidden, false},
 			{"GetFollowSymlinks", GetFollowSymlinks, true},
 			{"GetExcludeBinary", GetExcludeBinary, false},
@@ -682,7 +673,6 @@ func TestDefaultValues(t *testing.T) {
 		EnvTimestampFormat,
 		EnvMaxFileSize,
 		EnvMaxDepth,
-		EnvRecursive,
 		EnvIncludeHidden,
 		EnvFollowSymlinks,
 		EnvExcludeBinary,
@@ -705,7 +695,6 @@ func TestDefaultValues(t *testing.T) {
 		{"GetTimestampFormat默认值", GetTimestampFormat(), ""},
 		{"GetMaxFileSize默认值", GetMaxFileSize(), "10MB"},
 		{"GetMaxDepth默认值", GetMaxDepth(), 0},
-		{"GetRecursive默认值", GetRecursive(), false},
 		{"GetIncludeHidden默认值", GetIncludeHidden(), false},
 		{"GetFollowSymlinks默认值", GetFollowSymlinks(), false},
 		{"GetExcludeBinary默认值", GetExcludeBinary(), true},
@@ -757,7 +746,6 @@ func TestEnvironmentVariableConstants(t *testing.T) {
 		"EnvTimestampFormat":  EnvTimestampFormat,
 		"EnvMaxFileSize":      EnvMaxFileSize,
 		"EnvMaxDepth":         EnvMaxDepth,
-		"EnvRecursive":        EnvRecursive,
 		"EnvIncludeHidden":    EnvIncludeHidden,
 		"EnvFollowSymlinks":   EnvFollowSymlinks,
 		"EnvExcludeBinary":    EnvExcludeBinary,

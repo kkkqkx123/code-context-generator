@@ -112,7 +112,10 @@ func init() {
 	rootCmd.Flags().StringP("format", "f", "json", "输出格式 (json, xml, toml, markdown)")
 	rootCmd.Flags().StringSliceP("exclude", "e", []string{}, "排除的文件/目录模式")
 	rootCmd.Flags().StringSliceP("include", "i", []string{}, "包含的文件/目录模式")
-	rootCmd.Flags().BoolP("recursive", "r", true, "递归扫描")
+	// 注意：recursive 参数已被移除，使用 max-depth 控制递归行为
+	// max-depth = 0: 只扫描当前目录
+	// max-depth = 1: 递归1层
+	// max-depth = -1 或很大值: 无限递归
 	rootCmd.Flags().Bool("hidden", false, "包含隐藏文件")
 	rootCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示无限制)")
 	rootCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
@@ -127,7 +130,7 @@ func init() {
 	generateCmd.Flags().StringP("format", "f", "json", "输出格式 (json, xml, toml, markdown)")
 	generateCmd.Flags().StringSliceP("exclude", "e", []string{}, "排除的文件/目录模式")
 	generateCmd.Flags().StringSliceP("include", "i", []string{}, "包含的文件/目录模式")
-	generateCmd.Flags().BoolP("recursive", "r", true, "递归扫描")
+	// 注意：recursive 参数已被移除，使用 max-depth 控制递归行为
 	generateCmd.Flags().Bool("hidden", false, "包含隐藏文件")
 	generateCmd.Flags().IntP("max-depth", "d", 0, "最大扫描深度 (0表示无限制)")
 	generateCmd.Flags().IntP("max-size", "s", 0, "最大文件大小 (字节, 0表示无限制)")
@@ -153,7 +156,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	format, _ := cmd.Flags().GetString("format")
 	exclude, _ := cmd.Flags().GetStringSlice("exclude")
 	include, _ := cmd.Flags().GetStringSlice("include")
-	recursive, _ := cmd.Flags().GetBool("recursive")
+	// recursive 参数已被移除
 	hidden, _ := cmd.Flags().GetBool("hidden")
 	maxDepth, _ := cmd.Flags().GetInt("max-depth")
 	maxSize, _ := cmd.Flags().GetInt("max-size")
@@ -191,7 +194,8 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	if len(include) == 0 && len(cfg.Filters.IncludePatterns) > 0 {
 		include = cfg.Filters.IncludePatterns
 	}
-	if maxDepth == 0 && cfg.Filters.MaxDepth > 0 {
+	// 修复：当命令行maxDepth为0时，使用配置中的值（包括0）
+	if maxDepth == 0 {
 		maxDepth = cfg.Filters.MaxDepth
 	}
 	if maxSize == 0 && cfg.Filters.MaxFileSize != "" {
@@ -216,17 +220,18 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	// 创建文件系统遍历器
 	walker := filesystem.NewFileSystemWalker(types.WalkOptions{})
 
-	// 如果递归选项被禁用，设置最大深度为1
-	if !recursive && maxDepth == 0 {
-		maxDepth = 1
-	}
+	// 新的max-depth逻辑：
+	// 0: 只扫描当前目录（不递归）
+	// 1: 递归1层
+	// -1 或很大值: 无限递归
+	// 如果maxDepth为0，保持为0（只扫描当前目录）
 
 	// 执行遍历
 	if verbose {
 		if len(multipleFiles) > 0 {
 			fmt.Printf("正在处理指定文件: %v\n", multipleFiles)
 		} else {
-			fmt.Printf("正在扫描路径: %s (递归: %v)\n", path, recursive)
+			fmt.Printf("正在扫描路径: %s (最大深度: %d)\n", path, maxDepth)
 		}
 		fmt.Printf("排除模式: %v\n", exclude)
 		fmt.Printf("最大深度: %d, 最大文件大小: %d\n", maxDepth, maxSize)

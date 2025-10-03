@@ -168,7 +168,7 @@ func (cm *ConfigManager) GetEnvOverrides() map[string]string {
 		env.EnvTimestampFormat:  "timestamp_format",
 		env.EnvMaxFileSize:      "max_file_size",
 		env.EnvMaxDepth:         "max_depth",
-		env.EnvRecursive:        "recursive",
+		// env.EnvRecursive:        "recursive", // 已移除recursive参数
 		env.EnvIncludeHidden:    "include_hidden",
 		env.EnvFollowSymlinks:   "follow_symlinks",
 		env.EnvExcludeBinary:    "exclude_binary",
@@ -224,6 +224,8 @@ func (cm *ConfigManager) applyEnvOverrides(config *types.Config) {
 
 	// 应用排除二进制文件覆盖
 	config.Filters.ExcludeBinary = env.GetExcludeBinary()
+	
+	// 注意：recursive 环境变量已被移除，使用 max_depth 控制递归行为
 }
 
 // GenerateOutput 生成输出内容

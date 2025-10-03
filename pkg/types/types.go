@@ -162,7 +162,7 @@ type UIConfig struct {
 
 // SelectOptions 选择选项
 type SelectOptions struct {
-	Recursive       bool
+	// Recursive       bool // 已移除，使用max-depth控制递归
 	IncludePatterns []string
 	ExcludePatterns []string
 	MaxDepth        int
