@@ -148,6 +148,9 @@ type OutputConfig struct {
 	FilenameTemplate string `yaml:"filename_template"`
 	TimestampFormat  string `yaml:"timestamp_format"`
 	IncludeMetadata  bool   `yaml:"include_metadata"`
+	AIOptimized      bool   `yaml:"ai_optimized"`
+	AISummary        AISummaryConfig `yaml:"ai_summary"`
+	AIInstructions   AIInstructionsConfig `yaml:"ai_instructions"`
 }
 
 // UIConfig 界面配置
@@ -214,6 +217,19 @@ type LoggingConfig struct {
 	MaxSize    int
 	MaxBackups int
 	MaxAge     int
+}
+
+// AISummaryConfig AI摘要配置
+type AISummaryConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Template string `yaml:"template"` // default, minimal, detailed
+}
+
+// AIInstructionsConfig AI指令配置
+type AIInstructionsConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	FilePath string `yaml:"file_path"`
+	Content  string `yaml:"content"`
 }
 
 // CLIOptions 命令行选项
