@@ -62,19 +62,29 @@ func (d *CredentialsDetector) Detect(filePath string, content string) []types.Se
 	for lineNum, line := range lines {
 		for _, pattern := range d.patterns {
 			if pattern.MatchString(line) {
-				issue := types.SecurityIssue{
-					ID:             "CREDENTIALS_001",
-					Type:           "HardcodedCredentials",
-					Severity:       types.SeverityHigh,
-					Message:        "检测到硬编码的敏感凭证信息",
-					File:           filePath,
-					Line:           lineNum + 1,
-					Column:         strings.Index(line, pattern.FindString(line)) + 1,
-					Snippet:        strings.TrimSpace(line),
-					Recommendation: "使用环境变量或安全的配置管理系统存储敏感信息",
-					Confidence:     0.85,
+				// 检查是否已经有相同行的凭证检测问题
+				found := false
+				for _, existing := range issues {
+					if existing.Line == lineNum+1 {
+						found = true
+						break
+					}
 				}
-				issues = append(issues, issue)
+				if !found {
+					issue := types.SecurityIssue{
+						ID:             "CREDENTIALS_001",
+						Type:           "HardcodedCredentials",
+						Severity:       types.SeverityHigh,
+						Message:        "检测到硬编码的敏感凭证信息",
+						File:           filePath,
+						Line:           lineNum + 1,
+						Column:         strings.Index(line, pattern.FindString(line)) + 1,
+						Snippet:        strings.TrimSpace(line),
+						Recommendation: "使用环境变量或安全的配置管理系统存储敏感信息",
+						Confidence:     0.85,
+					}
+					issues = append(issues, issue)
+				}
 			}
 		}
 	}

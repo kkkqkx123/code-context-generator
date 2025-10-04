@@ -379,7 +379,19 @@ func TestGetDirectoryFileCount(t *testing.T) {
 }
 
 func TestFileSystemWalker_GetFileInfo(t *testing.T) {
-	walker := &FileSystemWalker{}
+	walker := NewWalker()
+	fsWalker, ok := walker.(*FileSystemWalker)
+	if !ok {
+		t.Fatal("NewWalker() did not return *FileSystemWalker")
+	}
+	
+	// 设置配置以启用元信息
+	config := &types.Config{
+		Output: types.OutputConfig{
+			IncludeMetadata: true,
+		},
+	}
+	fsWalker.SetConfig(config)
 
 	// 创建临时文件
 	tempFile, err := os.CreateTemp("", "test_file")
@@ -395,7 +407,7 @@ func TestFileSystemWalker_GetFileInfo(t *testing.T) {
 	}
 	tempFile.Close()
 
-	fileInfo, err := walker.GetFileInfo(tempFile.Name())
+	fileInfo, err := fsWalker.GetFileInfo(tempFile.Name())
 	if err != nil {
 		t.Fatalf("GetFileInfo() error = %v", err)
 	}
@@ -522,7 +534,7 @@ func TestFileSystemWalker_FilterBySize(t *testing.T) {
 }
 
 func TestFileSystemWalker_Walk(t *testing.T) {
-	walker := &FileSystemWalker{}
+	walker := NewWalker()
 
 	// 创建临时目录结构
 	tempDir, err := os.MkdirTemp("", "walk_test")

@@ -147,7 +147,7 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 		// 0: 只扫描当前目录（不递归）
 		// 1: 递归1层
 		// -1: 无限递归
-		if options.MaxDepth >= 0 && depth > options.MaxDepth {
+		if options.MaxDepth >= 0 && depth >= options.MaxDepth {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}

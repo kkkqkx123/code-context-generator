@@ -731,12 +731,10 @@ func TestEnvironmentVariableConstants(t *testing.T) {
 		"EnvTimestampFormat":     "CODE_CONTEXT_TIMESTAMP_FORMAT",
 		"EnvMaxFileSize":         "CODE_CONTEXT_MAX_FILE_SIZE",
 		"EnvMaxDepth":            "CODE_CONTEXT_MAX_DEPTH",
-		"EnvRecursive":           "CODE_CONTEXT_RECURSIVE",
 		"EnvIncludeHidden":       "CODE_CONTEXT_INCLUDE_HIDDEN",
 		"EnvFollowSymlinks":      "CODE_CONTEXT_FOLLOW_SYMLINKS",
 		"EnvExcludeBinary":       "CODE_CONTEXT_EXCLUDE_BINARY",
 		"EnvExcludePatterns":     "CODE_CONTEXT_EXCLUDE_PATTERNS",
-		"EnvAutocompleteEnabled": "CODE_CONTEXT_AUTOCOMPLETE_ENABLED",
 	}
 
 	actualConstants := map[string]string{
