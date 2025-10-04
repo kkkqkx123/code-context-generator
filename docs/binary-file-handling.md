@@ -216,14 +216,14 @@ max_depth = 5
 
 ```go
 type FileInfo struct {
-    Name     string    `yaml:"name" json:"name" toml:"name"`
-    Path     string    `yaml:"path" json:"path" toml:"path"`
-    Content  string    `yaml:"content" json:"content" toml:"content"`
-    Size     int64     `yaml:"size" json:"size" toml:"size"`
-    ModTime  time.Time `yaml:"mod_time" json:"mod_time" toml:"mod_time"`
-    IsDir    bool      `yaml:"is_dir" json:"is_dir" toml:"is_dir"`
-    IsHidden bool      `yaml:"is_hidden" json:"is_hidden" toml:"is_hidden"`
-    IsBinary bool      `yaml:"is_binary" json:"is_binary" toml:"is_binary"`
+    Name     string    `yaml:"name"`
+    Path     string    `yaml:"path"`
+    Content  string    `yaml:"content"`
+    Size     int64     `yaml:"size"`
+    ModTime  time.Time `yaml:"mod_time"`
+    IsDir    bool      `yaml:"is_dir"`
+    IsHidden bool      `yaml:"is_hidden"`
+    IsBinary bool      `yaml:"is_binary"`
 }
 ```
 
@@ -249,12 +249,12 @@ type WalkOptions struct {
 
 ```go
 type FiltersConfig struct {
-    MaxFileSize     string   `yaml:"max_file_size" json:"max_file_size" toml:"max_file_size"`
-    ExcludePatterns []string `yaml:"exclude_patterns" json:"exclude_patterns" toml:"exclude_patterns"`
-    IncludePatterns []string `yaml:"include_patterns" json:"include_patterns" toml:"include_patterns"`
-    MaxDepth        int      `yaml:"max_depth" json:"max_depth" toml:"max_depth"`
-    FollowSymlinks  bool     `yaml:"follow_symlinks" json:"follow_symlinks" toml:"follow_symlinks"`
-    ExcludeBinary   bool     `yaml:"exclude_binary" json:"exclude_binary" toml:"exclude_binary"`
+    MaxFileSize     string   `yaml:"max_file_size"`
+    ExcludePatterns []string `yaml:"exclude_patterns"`
+    IncludePatterns []string `yaml:"include_patterns"`
+    MaxDepth        int      `yaml:"max_depth"`
+    FollowSymlinks  bool     `yaml:"follow_symlinks"`
+    ExcludeBinary   bool     `yaml:"exclude_binary"`
 }
 ```
 

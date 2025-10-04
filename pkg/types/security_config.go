@@ -7,14 +7,14 @@ import (
 
 // SecurityConfig 安全扫描配置结构体
 type SecurityConfig struct {
-	Enabled        bool     `yaml:"enabled" json:"enabled" toml:"enabled"`
-	FailOnCritical bool     `yaml:"fail_on_critical" json:"fail_on_critical" toml:"fail_on_critical"`
-	ScanLevel      string   `yaml:"scan_level" json:"scan_level" toml:"scan_level"`
-	ReportFormat   string   `yaml:"report_format" json:"report_format" toml:"report_format"`
+	Enabled        bool     `yaml:"enabled"`
+	FailOnCritical bool     `yaml:"fail_on_critical"`
+	ScanLevel      string   `yaml:"scan_level"`
+	ReportFormat   string   `yaml:"report_format"`
 	
-	Detectors      DetectorConfig    `yaml:"detectors" json:"detectors" toml:"detectors"`
-	Exclusions     ExclusionConfig   `yaml:"exclusions" json:"exclusions" toml:"exclusions"`
-	Reporting      ReportingConfig   `yaml:"reporting" json:"reporting" toml:"reporting"`
+	Detectors      DetectorConfig    `yaml:"detectors"`
+	Exclusions     ExclusionConfig   `yaml:"exclusions"`
+	Reporting      ReportingConfig   `yaml:"reporting"`
 }
 
 // ScanLevel 扫描级别
@@ -28,51 +28,51 @@ const (
 
 // DetectorConfig 检测器配置
 type DetectorConfig struct {
-	Credentials    bool `yaml:"credentials" json:"credentials" toml:"credentials"`
-	SQLInjection   bool `yaml:"sql_injection" json:"sql_injection" toml:"sql_injection"`
-	XSS            bool `yaml:"xss" json:"xss" toml:"xss"`
-	PathTraversal  bool `yaml:"path_traversal" json:"path_traversal" toml:"path_traversal"`
-	Quality        bool `yaml:"quality" json:"quality" toml:"quality"`
+	Credentials    bool `yaml:"credentials"`
+	SQLInjection   bool `yaml:"sql_injection"`
+	XSS            bool `yaml:"xss"`
+	PathTraversal  bool `yaml:"path_traversal"`
+	Quality        bool `yaml:"quality"`
 }
 
 // HardcodedCredentialsConfig 硬编码凭证检测配置
 type HardcodedCredentialsConfig struct {
-	Enabled          bool     `yaml:"enabled" json:"enabled" toml:"enabled"`
-	SeverityThreshold SeverityLevel `yaml:"severity_threshold" json:"severity_threshold" toml:"severity_threshold"`
-	Patterns         []string `yaml:"patterns" json:"patterns" toml:"patterns"`
+	Enabled          bool     `yaml:"enabled"`
+	SeverityThreshold SeverityLevel `yaml:"severity_threshold"`
+	Patterns         []string `yaml:"patterns"`
 }
 
 // VulnerabilityConfig 安全漏洞检测配置
 type VulnerabilityConfig struct {
-	Enabled          bool     `yaml:"enabled" json:"enabled" toml:"enabled"`
-	SeverityThreshold SeverityLevel `yaml:"severity_threshold" json:"severity_threshold" toml:"severity_threshold"`
+	Enabled          bool     `yaml:"enabled"`
+	SeverityThreshold SeverityLevel `yaml:"severity_threshold"`
 }
 
 // QualityConfig 代码质量检测配置
 type QualityConfig struct {
-	Enabled          bool     `yaml:"enabled" json:"enabled" toml:"enabled"`
-	SeverityThreshold SeverityLevel `yaml:"severity_threshold" json:"severity_threshold" toml:"severity_threshold"`
+	Enabled          bool     `yaml:"enabled"`
+	SeverityThreshold SeverityLevel `yaml:"severity_threshold"`
 }
 
 // ExclusionConfig 排除配置
 type ExclusionConfig struct {
-	Files    []string         `yaml:"files" json:"files" toml:"files"`
-	Patterns []string         `yaml:"patterns" json:"patterns" toml:"patterns"`
-	Rules    []ExclusionRule `yaml:"rules" json:"rules" toml:"rules"`
+	Files    []string         `yaml:"files"`
+	Patterns []string         `yaml:"patterns"`
+	Rules    []ExclusionRule `yaml:"rules"`
 }
 
 // ExclusionRule 排除规则
 type ExclusionRule struct {
-	Pattern string `yaml:"pattern" json:"pattern" toml:"pattern"`
-	Reason  string `yaml:"reason" json:"reason" toml:"reason"`
+	Pattern string `yaml:"pattern"`
+	Reason  string `yaml:"reason"`
 }
 
 // ReportingConfig 报告配置
 type ReportingConfig struct {
-	Format         string `yaml:"format" json:"format" toml:"format"`
-	OutputFile     string `yaml:"output_file" json:"output_file" toml:"output_file"`
-	IncludeDetails bool   `yaml:"include_details" json:"include_details" toml:"include_details"`
-	ShowStatistics bool   `yaml:"show_statistics" json:"show_statistics" toml:"show_statistics"`
+	Format         string `yaml:"format"`
+	OutputFile     string `yaml:"output_file"`
+	IncludeDetails bool   `yaml:"include_details"`
+	ShowStatistics bool   `yaml:"show_statistics"`
 }
 
 // SecurityReport 安全报告结构体

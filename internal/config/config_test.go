@@ -177,8 +177,8 @@ func TestConfigManager_Save(t *testing.T) {
 		wantErr   bool
 	}{
 		{"保存为YAML", "yaml", false},
-		{"保存为JSON", "json", false},
-		{"保存为TOML", "toml", false},
+		{"保存为JSON", "json", true},  // 现在只支持YAML格式
+		{"保存为TOML", "toml", true},  // 现在只支持YAML格式
 		{"保存为不支持的格式", "unsupported", true},
 	}
 
@@ -401,7 +401,7 @@ func TestLoadConfig(t *testing.T) {
   }
 }`,
 			extension: ".json",
-			wantErr: false,
+			wantErr: true,  // 现在只支持YAML格式
 		},
 		{
 			name: "加载TOML配置",
@@ -410,7 +410,7 @@ default_format = "json"
 filename_template = "{{.timestamp}}.{{.extension}}"
 `,
 			extension: ".toml",
-			wantErr: false,
+			wantErr: true,  // 现在只支持YAML格式
 		},
 		{
 			name:      "不支持的格式",

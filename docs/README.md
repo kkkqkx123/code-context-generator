@@ -59,7 +59,7 @@
 ## 🔧 配置文档
 
 ### 配置文件格式
-支持三种格式：YAML、JSON、TOML，默认使用 YAML 格式（config.yaml）。
+使用 YAML 格式（config.yaml）。
 
 ### 配置文件存放位置
 - **默认位置**：当前工作目录下的 `config.yaml` 文件

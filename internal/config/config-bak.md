@@ -143,12 +143,16 @@ func (cm *ConfigManager) Save(configPath string, format string) error {
 		return fmt.Errorf("配置为空")
 	}
 
-	// 统一只支持YAML格式配置文件
-	if format != "yaml" && format != "yml" {
-		return fmt.Errorf("不支持的格式: %s，请使用YAML格式", format)
+	switch strings.ToLower(format) {
+	case "yaml", "yml":
+		return cm.saveYAML(configPath)
+	case "json":
+		return cm.saveJSON(configPath)
+	case "toml":
+		return cm.saveTOML(configPath)
+	default:
+		return fmt.Errorf("不支持的格式: %s", format)
 	}
-
-	return cm.saveYAML(configPath)
 }
 
 // GetEnvOverrides 获取环境变量覆盖
@@ -165,22 +169,22 @@ func (cm *ConfigManager) GetEnvOverrides() map[string]string {
 		env.EnvMaxFileSize:      "max_file_size",
 		env.EnvMaxDepth:         "max_depth",
 		// env.EnvRecursive:        "recursive", // 已移除recursive参数
-		env.EnvIncludeHidden:   "include_hidden",
-		env.EnvFollowSymlinks:  "follow_symlinks",
-		env.EnvExcludeBinary:   "exclude_binary",
-		env.EnvExcludePatterns: "exclude_patterns",
-		env.EnvEncoding:        "encoding",
-		env.EnvIncludeMetadata: "include_metadata",
+		env.EnvIncludeHidden:    "include_hidden",
+		env.EnvFollowSymlinks:   "follow_symlinks",
+		env.EnvExcludeBinary:    "exclude_binary",
+		env.EnvExcludePatterns:  "exclude_patterns",
+		env.EnvEncoding:         "encoding",
+		env.EnvIncludeMetadata:  "include_metadata",
 		// 安全扫描配置
-		env.EnvSecurityEnabled:             "security_enabled",
-		env.EnvSecurityFailOnCritical:      "security_fail_on_critical",
-		env.EnvSecurityScanLevel:           "security_scan_level",
-		env.EnvSecurityReportFormat:        "security_report_format",
-		env.EnvSecurityDetectCredentials:   "security_detect_credentials",
-		env.EnvSecurityDetectSQLInjection:  "security_detect_sql_injection",
-		env.EnvSecurityDetectXSS:           "security_detect_xss",
+		env.EnvSecurityEnabled:           "security_enabled",
+		env.EnvSecurityFailOnCritical:    "security_fail_on_critical",
+		env.EnvSecurityScanLevel:         "security_scan_level",
+		env.EnvSecurityReportFormat:      "security_report_format",
+		env.EnvSecurityDetectCredentials: "security_detect_credentials",
+		env.EnvSecurityDetectSQLInjection: "security_detect_sql_injection",
+		env.EnvSecurityDetectXSS:         "security_detect_xss",
 		env.EnvSecurityDetectPathTraversal: "security_detect_path_traversal",
-		env.EnvSecurityDetectQuality:       "security_detect_quality",
+		env.EnvSecurityDetectQuality:     "security_detect_quality",
 	}
 
 	for envKey, fieldName := range mapping {
@@ -243,15 +247,15 @@ func (cm *ConfigManager) applyEnvOverrides(config *types.Config) {
 
 	// 应用排除二进制文件覆盖
 	config.Filters.ExcludeBinary = env.GetExcludeBinary()
-
+	
 	// 应用编码覆盖
 	if encoding := env.GetEncoding(); encoding != "" {
 		config.Output.Encoding = encoding
 	}
-
+	
 	// 应用元信息开关覆盖
 	config.Output.IncludeMetadata = env.GetIncludeMetadata()
-
+	
 	// 注意：recursive 环境变量已被移除，使用 max_depth 控制递归行为
 }
 
@@ -359,8 +363,6 @@ func (cm *ConfigManager) saveTOML(configPath string) error {
 	}
 	return nil
 }
-
-
 
 func (cm *ConfigManager) generateXML(data types.ContextData) (string, error) {
 	// 获取XML配置
@@ -500,7 +502,24 @@ func escapeXML(s string) string {
 	return s
 }
 
+func (cm *ConfigManager) generateJSON(data types.ContextData) (string, error) {
+	// 实现JSON生成逻辑
+	output, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("JSON生成失败: %w", err)
+	}
+	return string(output), nil
+}
 
+func (cm *ConfigManager) generateTOML(data types.ContextData) (string, error) {
+	// 实现TOML生成逻辑
+	var buf strings.Builder
+	encoder := toml.NewEncoder(&buf)
+	if err := encoder.Encode(data); err != nil {
+		return "", fmt.Errorf("TOML生成失败: %w", err)
+	}
+	return buf.String(), nil
+}
 
 func (cm *ConfigManager) generateMarkdown(data types.ContextData) (string, error) {
 	// 实现Markdown生成逻辑
@@ -528,25 +547,6 @@ func (cm *ConfigManager) generateMarkdown(data types.ContextData) (string, error
 	return sb.String(), nil
 }
 
-func (cm *ConfigManager) generateJSON(data types.ContextData) (string, error) {
-	// 实现JSON生成逻辑
-	output, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("JSON生成失败: %w", err)
-	}
-	return string(output), nil
-}
-
-func (cm *ConfigManager) generateTOML(data types.ContextData) (string, error) {
-	// 实现TOML生成逻辑
-	var buf strings.Builder
-	encoder := toml.NewEncoder(&buf)
-	if err := encoder.Encode(data); err != nil {
-		return "", fmt.Errorf("TOML生成失败: %w", err)
-	}
-	return buf.String(), nil
-}
-
 // LoadConfig 从文件加载配置（辅助函数）
 func LoadConfig(configPath string) (*types.Config, error) {
 	data, err := os.ReadFile(configPath)
@@ -557,13 +557,25 @@ func LoadConfig(configPath string) (*types.Config, error) {
 	ext := strings.ToLower(filepath.Ext(configPath))
 	var config types.Config
 
-	// 统一只支持YAML格式配置文件
-	if ext != ".yaml" && ext != ".yml" {
-		return nil, fmt.Errorf("不支持的配置文件格式: %s，请使用YAML格式配置文件", ext)
-	}
-
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("YAML解析失败: %w", err)
+	switch ext {
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			return nil, fmt.Errorf("YAML解析失败: %w", err)
+		}
+	case ".json":
+		if err := json.Unmarshal(data, &config); err != nil {
+			return nil, fmt.Errorf("JSON解析失败: %w", err)
+		}
+	case ".toml":
+		if _, err := toml.Decode(string(data), &config); err != nil {
+			return nil, fmt.Errorf("TOML解析失败: %w", err)
+		}
+	case ".xml":
+		// 对于XML配置文件，我们需要特殊处理，因为XML结构通常与Go结构体不匹配
+		// 这里我们使用一个简化的XML解析，或者返回错误提示用户使用支持的格式
+		return nil, fmt.Errorf("XML配置文件格式暂不支持，请使用YAML、JSON或TOML格式")
+	default:
+		return nil, fmt.Errorf("不支持的配置文件格式: %s", ext)
 	}
 
 	// 根据配置文件名应用相应的格式配置
@@ -610,16 +622,16 @@ func GetDefaultConfig() *types.Config {
 			IncludeHash:    false,
 		},
 		Security: types.SecurityConfig{
-			Enabled:        false, // 默认禁用，仅由gitignore规则控制
-			ScanLevel:      "standard",
+			Enabled:     false, // 默认禁用，仅由gitignore规则控制
+			ScanLevel:   "standard",
 			FailOnCritical: false,
-			ReportFormat:   "text",
+			ReportFormat: "text",
 			Detectors: types.DetectorConfig{
-				Credentials:   false, // 默认禁用
-				SQLInjection:  false, // 默认禁用
-				XSS:           false, // 默认禁用
+				Credentials:    false, // 默认禁用
+				SQLInjection: false, // 默认禁用
+				XSS:          false, // 默认禁用
 				PathTraversal: false, // 默认禁用
-				Quality:       false, // 默认禁用
+				Quality:      false, // 默认禁用
 			},
 		},
 		Formats: types.FormatsConfig{

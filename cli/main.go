@@ -12,8 +12,8 @@ import (
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/internal/formatter"
 	"code-context-generator/internal/utils"
-	"code-context-generator/pkg/types"
 	"code-context-generator/pkg/security"
+	"code-context-generator/pkg/types"
 
 	"github.com/spf13/cobra"
 )
@@ -215,7 +215,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	if !excludeBinary && cfg.Filters.ExcludeBinary {
 		excludeBinary = cfg.Filters.ExcludeBinary
 	}
-	
+
 	// 应用编码设置（命令行参数优先）
 	if encoding != "" && encoding != "utf-8" {
 		cfg.Output.Encoding = encoding
@@ -228,7 +228,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// 创建文件系统遍历器
 	walker := filesystem.NewFileSystemWalker(types.WalkOptions{})
-	
+
 	// 设置walker的配置
 	if fsWalker, ok := walker.(*filesystem.FileSystemWalker); ok {
 		fsWalker.SetConfig(cfg)
@@ -287,7 +287,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	if cfg.Security.Enabled {
 		fmt.Println(utils.InfoColor("🔍 开始安全扫描..."))
 		securityIntegration := security.NewSecurityIntegration(&cfg.Security)
-		
+
 		// 收集要扫描的文件路径
 		var filesToScan []string
 		for _, file := range result.Files {
@@ -304,20 +304,20 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			fmt.Printf("安全扫描失败: %v\n", err)
 		} else {
 			securityIntegration.PrintSummary(securityReport)
-			
+
 			// 如果启用了失败选项且有关键问题，则退出
 			if cfg.Security.FailOnCritical && securityIntegration.HasCriticalIssues(securityReport) {
 				return fmt.Errorf("发现严重安全问题，扫描终止")
 			}
-			
+
 			// 生成安全报告文件
 			if cfg.Security.ReportFormat != "" {
-				securityReportFile := fmt.Sprintf("security_report_%s.%s", 
+				securityReportFile := fmt.Sprintf("security_report_%s.%s",
 					filepath.Base(path), cfg.Security.ReportFormat)
 				if cfg.Security.ReportFormat == "text" {
 					securityReportFile = fmt.Sprintf("security_report_%s.txt", filepath.Base(path))
 				}
-				
+
 				err = securityIntegration.GenerateReport(securityReport, securityReportFile)
 				if err != nil {
 					fmt.Printf("生成安全报告失败: %v\n", err)
@@ -391,7 +391,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 				defaultOutput = fmt.Sprintf("context_%s.md", filepath.Base(path))
 			}
 		}
-		
+
 		// 标准化换行符为当前操作系统格式
 		normalizedData := utils.NormalizeLineEndings(outputData)
 		if err := os.WriteFile(defaultOutput, []byte(normalizedData), 0644); err != nil {
@@ -400,13 +400,13 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		fmt.Println(utils.SuccessColor("✅ 成功生成代码上下文文件:"), defaultOutput)
 		fmt.Printf("📊 包含 %d 个文件，%d 个文件夹\n", result.FileCount, result.FolderCount)
 		fmt.Printf("💾 总大小: %s\n", utils.FormatFileSize(result.TotalSize))
-	
-	// 显示安全扫描状态
-	if cfg.Security.Enabled {
-		fmt.Println(utils.SuccessColor("🔒 安全扫描已启用"))
-	} else {
-		fmt.Println(utils.InfoColor("🔓 安全扫描已禁用"))
-	}
+
+		// 显示安全扫描状态
+		if cfg.Security.Enabled {
+			fmt.Println(utils.SuccessColor("🔒 安全扫描已启用"))
+		} else {
+			fmt.Println(utils.InfoColor("🔓 安全扫描已禁用"))
+		}
 	}
 
 	return nil
@@ -471,14 +471,14 @@ func readPatternFile(patternFile string) ([]string, error) {
 
 	var patterns []string
 	lines := strings.Split(string(content), "\n")
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		// 跳过空行和注释
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		// 统一路径分隔符：将\和/都转换为当前系统的路径分隔符
 		// 这样可以支持Windows和Linux格式的路径
 		if filepath.Separator == '\\' {
@@ -490,10 +490,10 @@ func readPatternFile(patternFile string) ([]string, error) {
 			line = strings.ReplaceAll(line, "\\", "/")
 			line = strings.ReplaceAll(line, "//", "/") // 处理双斜杠
 		}
-		
+
 		patterns = append(patterns, line)
 	}
-	
+
 	return patterns, nil
 }
 
