@@ -62,6 +62,7 @@ type Config struct {
 	Performance   PerformanceConfig   `yaml:"performance"`
 	Logging       LoggingConfig       `yaml:"logging"`
 	Security      SecurityConfig      `yaml:"security"`
+	Git           GitIntegrationConfig `yaml:"git"`
 }
 
 // FormatsConfig 输出格式配置

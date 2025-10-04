@@ -727,14 +727,30 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 	var err error
 
 	if includeMetadata {
+		// 定义元数据项结构
+		type MetadataItem struct {
+			Key   string      `xml:"key,attr"`
+			Value interface{} `xml:"value"`
+		}
+
 		// 包含元信息的默认结构
 		type SerializableContextData struct {
-			XMLName     xml.Name           `xml:"context"`
-			Files       []types.FileInfo   `xml:"files>file"`
-			Folders     []types.FolderInfo `xml:"folders>folder"`
-			FileCount   int                `xml:"file_count"`
-			FolderCount int                `xml:"folder_count"`
-			TotalSize   int64              `xml:"total_size"`
+			XMLName     xml.Name               `xml:"context"`
+			Files       []types.FileInfo       `xml:"files>file"`
+			Folders     []types.FolderInfo     `xml:"folders>folder"`
+			FileCount   int                    `xml:"file_count"`
+			FolderCount int                    `xml:"folder_count"`
+			TotalSize   int64                  `xml:"total_size"`
+			Metadata    []MetadataItem         `xml:"metadata>item"`
+		}
+
+		// 转换metadata为可序列化的结构
+		var metadataItems []MetadataItem
+		for key, value := range data.Metadata {
+			metadataItems = append(metadataItems, MetadataItem{
+				Key:   key,
+				Value: value,
+			})
 		}
 
 		serializableData := SerializableContextData{
@@ -743,6 +759,7 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 			FileCount:   data.FileCount,
 			FolderCount: data.FolderCount,
 			TotalSize:   data.TotalSize,
+			Metadata:    metadataItems,
 		}
 		output, err = xml.MarshalIndent(serializableData, "", "  ")
 	} else {
@@ -941,6 +958,28 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 		}
 	}
 
+	// 写入元信息部分
+	if includeMetadata && len(data.Metadata) > 0 {
+		buf.WriteString("\n[metadata]\n")
+		
+		// 处理root_path
+		if rootPath, exists := data.Metadata["root_path"]; exists {
+			buf.WriteString(fmt.Sprintf("root_path = \"%s\"\n", rootPath))
+		}
+		
+		// 处理git信息
+		if gitInfo, exists := data.Metadata["git"]; exists {
+			buf.WriteString("\n[metadata.git]\n")
+			// 将git信息转换为JSON字符串以便在TOML中显示
+			gitJSON, err := json.Marshal(gitInfo)
+			if err == nil {
+				buf.WriteString(fmt.Sprintf("git_info = %s\n", string(gitJSON)))
+			} else {
+				buf.WriteString(fmt.Sprintf("git_info = \"%v\"\n", gitInfo))
+			}
+		}
+	}
+
 	result := buf.String()
 
 	// 检查是否需要编码转换
@@ -1090,6 +1129,30 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 					sb.WriteString(fmt.Sprintf("- `%s` (%d 字节)\n", file.Name, file.Size))
 				}
 				sb.WriteString("\n")
+			}
+		}
+	}
+
+	// 添加元信息部分
+	if includeMetadata && len(data.Metadata) > 0 {
+		sb.WriteString("## 元信息\n\n")
+		
+		// 处理root_path
+		if rootPath, exists := data.Metadata["root_path"]; exists {
+			sb.WriteString(fmt.Sprintf("- **根路径**: `%s`\n", rootPath))
+		}
+		
+		// 处理git信息
+		if gitInfo, exists := data.Metadata["git"]; exists {
+			sb.WriteString("\n### Git信息\n\n")
+			// 将git信息转换为JSON字符串以便显示
+			gitJSON, err := json.MarshalIndent(gitInfo, "", "  ")
+			if err == nil {
+				sb.WriteString("```json\n")
+				sb.WriteString(string(gitJSON))
+				sb.WriteString("\n```\n")
+			} else {
+				sb.WriteString(fmt.Sprintf("```\n%v\n```\n", gitInfo))
 			}
 		}
 	}

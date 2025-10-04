@@ -721,5 +721,34 @@ func GetDefaultConfig() *types.Config {
 			FilenameTemplate: "context_{{.timestamp}}.{{.extension}}",
 			IncludeMetadata:  false,
 		},
+		Git: types.GitIntegrationConfig{
+			Enabled:      false,
+			IncludeLogs:  false,
+			LogCount:     50,
+			IncludeDiffs: false,
+			DiffFormat:   "unified",
+			Stats: struct {
+				Enabled    bool   `json:"enabled" yaml:"enabled" xml:"enabled"`
+				TimePeriod string `json:"time_period" yaml:"time_period" xml:"time_period"`
+				AuthorsTop int    `json:"authors_top" yaml:"authors_top" xml:"authors_top"`
+				FilesTop   int    `json:"files_top" yaml:"files_top" xml:"files_top"`
+			}{
+				Enabled:    false,
+				TimePeriod: "1y",
+				AuthorsTop: 10,
+				FilesTop:   20,
+			},
+			Filters: struct {
+				Authors []string `json:"authors" yaml:"authors" xml:"authors"`
+				Paths   []string `json:"paths" yaml:"paths" xml:"paths"`
+				Since   string   `json:"since" yaml:"since" xml:"since"`
+				Until   string   `json:"until" yaml:"until" xml:"until"`
+			}{
+				Authors: []string{},
+				Paths:   []string{},
+				Since:   "",
+				Until:   "",
+			},
+		},
 	}
 }

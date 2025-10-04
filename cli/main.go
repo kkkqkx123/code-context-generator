@@ -11,6 +11,7 @@ import (
 	"code-context-generator/internal/env"
 	"code-context-generator/internal/filesystem"
 	"code-context-generator/internal/formatter"
+	"code-context-generator/internal/git"
 	"code-context-generator/internal/utils"
 	"code-context-generator/pkg/security"
 	"code-context-generator/pkg/types"
@@ -142,6 +143,22 @@ func init() {
 	generateCmd.Flags().String("encoding", "utf-8", "输出文件编码格式")
 	generateCmd.Flags().StringSliceP("multiple-files", "m", []string{}, "多个文件路径（可多次使用）")
 	generateCmd.Flags().StringP("pattern-file", "p", "", "从文件读取模式（支持.gitignore格式，兼容Windows/Linux路径分隔符）")
+
+	// Git集成相关标志
+	generateCmd.Flags().Bool("git-enabled", false, "启用Git集成功能")
+	generateCmd.Flags().Bool("git-logs", false, "包含Git提交历史")
+	generateCmd.Flags().Int("git-log-count", 50, "Git提交历史记录数量")
+	generateCmd.Flags().Bool("git-diffs", false, "包含Git差异信息")
+	generateCmd.Flags().String("git-diff-format", "unified", "Git差异格式 (unified, context)")
+	generateCmd.Flags().Bool("git-stats", false, "包含Git统计信息")
+	generateCmd.Flags().String("git-time-period", "1y", "Git统计时间周期 (1y, 6m, 3m, 1m, 1w)")
+	generateCmd.Flags().StringSlice("git-authors", []string{}, "过滤特定作者（可多次使用）")
+	generateCmd.Flags().StringSlice("git-paths", []string{}, "过滤特定路径（可多次使用）")
+	generateCmd.Flags().String("git-since", "", "Git提交开始时间 (YYYY-MM-DD)")
+	generateCmd.Flags().String("git-until", "", "Git提交结束时间 (YYYY-MM-DD)")
+
+	// 元信息标志
+	generateCmd.Flags().Bool("include-metadata", false, "包含元信息（如Git数据等）")
 }
 
 // main 主函数
@@ -169,6 +186,22 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	encoding, _ := cmd.Flags().GetString("encoding")
 	multipleFiles, _ := cmd.Flags().GetStringSlice("multiple-files")
 	patternFile, _ := cmd.Flags().GetString("pattern-file")
+
+	// Git集成相关标志
+	gitEnabled, _ := cmd.Flags().GetBool("git-enabled")
+	gitLogs, _ := cmd.Flags().GetBool("git-logs")
+	gitLogCount, _ := cmd.Flags().GetInt("git-log-count")
+	gitDiffs, _ := cmd.Flags().GetBool("git-diffs")
+	gitDiffFormat, _ := cmd.Flags().GetString("git-diff-format")
+	gitStats, _ := cmd.Flags().GetBool("git-stats")
+	gitTimePeriod, _ := cmd.Flags().GetString("git-time-period")
+	gitAuthors, _ := cmd.Flags().GetStringSlice("git-authors")
+	gitPaths, _ := cmd.Flags().GetStringSlice("git-paths")
+	gitSince, _ := cmd.Flags().GetString("git-since")
+	gitUntil, _ := cmd.Flags().GetString("git-until")
+
+	// 元信息标志
+	includeMetadata, _ := cmd.Flags().GetBool("include-metadata")
 
 	// 如果指定了多个文件，使用第一个文件作为路径参数
 	path := "."
@@ -219,6 +252,46 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	// 应用编码设置（命令行参数优先）
 	if encoding != "" && encoding != "utf-8" {
 		cfg.Output.Encoding = encoding
+	}
+
+	// 合并Git配置（命令行参数优先）
+	if gitEnabled {
+		cfg.Git.Enabled = true
+	}
+	if gitLogs {
+		cfg.Git.IncludeLogs = true
+	}
+	if gitLogCount > 0 && gitLogCount != 50 {
+		cfg.Git.LogCount = gitLogCount
+	}
+	if gitDiffs {
+		cfg.Git.IncludeDiffs = true
+	}
+	if gitDiffFormat != "" && gitDiffFormat != "unified" {
+		cfg.Git.DiffFormat = gitDiffFormat
+	}
+	if gitStats {
+		cfg.Git.Stats.Enabled = true
+	}
+	if gitTimePeriod != "" && gitTimePeriod != "1y" {
+		cfg.Git.Stats.TimePeriod = gitTimePeriod
+	}
+	if len(gitAuthors) > 0 {
+		cfg.Git.Filters.Authors = gitAuthors
+	}
+	if len(gitPaths) > 0 {
+		cfg.Git.Filters.Paths = gitPaths
+	}
+	if gitSince != "" {
+		cfg.Git.Filters.Since = gitSince
+	}
+	if gitUntil != "" {
+		cfg.Git.Filters.Until = gitUntil
+	}
+
+	// 合并元信息配置
+	if includeMetadata {
+		cfg.Output.IncludeMetadata = true
 	}
 
 	// 验证格式
@@ -328,6 +401,42 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// 执行Git集成
+	if cfg.Git.Enabled {
+		fmt.Println(utils.InfoColor("🔍 开始Git集成分析..."))
+		gitIntegration, err := git.NewIntegration(path, &cfg.Git)
+		if err != nil {
+			fmt.Printf("Git集成初始化失败: %v\n", err)
+			// Git集成失败不终止整个流程，只是警告
+		} else {
+			// 获取Git集成数据
+			gitData, err := gitIntegration.GetGitIntegrationData()
+			if err != nil {
+				fmt.Printf("Git集成失败: %v\n", err)
+				// Git集成失败不终止整个流程，只是警告
+			} else if gitData != nil {
+				// 将Git数据添加到结果中
+				if result.Metadata == nil {
+					result.Metadata = make(map[string]interface{})
+				}
+				result.Metadata["git"] = gitData
+				
+				if verbose {
+					fmt.Printf("Git仓库: %s\n", gitData.GitInfo.RepositoryPath)
+					if gitData.GitInfo.IsGitRepo {
+						fmt.Printf("分支: %s\n", gitData.GitInfo.CurrentBranch)
+						if cfg.Git.IncludeLogs && gitData.GitHistory != nil {
+							fmt.Printf("提交数量: %d\n", len(gitData.GitHistory.Commits))
+						}
+						if cfg.Git.Stats.Enabled && gitData.GitStats != nil {
+							fmt.Printf("统计信息已生成\n")
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// 创建格式化器
 	formatter, err := formatter.NewFormatter(format, cfg)
 	if err != nil {
@@ -406,6 +515,24 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			fmt.Println(utils.SuccessColor("🔒 安全扫描已启用"))
 		} else {
 			fmt.Println(utils.InfoColor("🔓 安全扫描已禁用"))
+		}
+
+		// 显示Git集成状态
+		if cfg.Git.Enabled {
+			fmt.Println(utils.SuccessColor("🔀 Git集成已启用"))
+			if result.Metadata != nil {
+				if gitData, ok := result.Metadata["git"].(*types.GitIntegrationData); ok && gitData.GitInfo != nil && gitData.GitInfo.IsGitRepo {
+					fmt.Printf("📋 Git仓库: %s\n", gitData.GitInfo.CurrentBranch)
+					if cfg.Git.IncludeLogs && gitData.GitHistory != nil {
+						fmt.Printf("📝 提交历史: %d条记录\n", len(gitData.GitHistory.Commits))
+					}
+					if cfg.Git.Stats.Enabled && gitData.GitStats != nil {
+						fmt.Printf("📊 Git统计信息已生成\n")
+					}
+				}
+			}
+		} else {
+			fmt.Println(utils.InfoColor("🔀 Git集成已禁用"))
 		}
 	}
 
@@ -525,6 +652,43 @@ func generateConfigOutput(cfg *types.Config) string {
 		output.WriteString("  包含模式:\n")
 		for _, pattern := range cfg.Filters.IncludePatterns {
 			output.WriteString(fmt.Sprintf("    - %s\n", pattern))
+		}
+	}
+
+	output.WriteString("\nGit集成:\n")
+	output.WriteString(fmt.Sprintf("  启用状态: %v\n", cfg.Git.Enabled))
+	if cfg.Git.Enabled {
+		output.WriteString(fmt.Sprintf("  包含提交历史: %v\n", cfg.Git.IncludeLogs))
+		if cfg.Git.IncludeLogs {
+			output.WriteString(fmt.Sprintf("  提交历史数量: %d\n", cfg.Git.LogCount))
+		}
+		output.WriteString(fmt.Sprintf("  包含差异信息: %v\n", cfg.Git.IncludeDiffs))
+		if cfg.Git.IncludeDiffs {
+			output.WriteString(fmt.Sprintf("  差异格式: %s\n", cfg.Git.DiffFormat))
+		}
+		output.WriteString(fmt.Sprintf("  包含统计信息: %v\n", cfg.Git.Stats.Enabled))
+		if cfg.Git.Stats.Enabled {
+			output.WriteString(fmt.Sprintf("  统计时间周期: %s\n", cfg.Git.Stats.TimePeriod))
+			output.WriteString(fmt.Sprintf("  作者排行数量: %d\n", cfg.Git.Stats.AuthorsTop))
+			output.WriteString(fmt.Sprintf("  文件排行数量: %d\n", cfg.Git.Stats.FilesTop))
+		}
+		if len(cfg.Git.Filters.Authors) > 0 {
+			output.WriteString("  作者过滤:\n")
+			for _, author := range cfg.Git.Filters.Authors {
+				output.WriteString(fmt.Sprintf("    - %s\n", author))
+			}
+		}
+		if len(cfg.Git.Filters.Paths) > 0 {
+			output.WriteString("  路径过滤:\n")
+			for _, path := range cfg.Git.Filters.Paths {
+				output.WriteString(fmt.Sprintf("    - %s\n", path))
+			}
+		}
+		if cfg.Git.Filters.Since != "" {
+			output.WriteString(fmt.Sprintf("  开始时间: %s\n", cfg.Git.Filters.Since))
+		}
+		if cfg.Git.Filters.Until != "" {
+			output.WriteString(fmt.Sprintf("  结束时间: %s\n", cfg.Git.Filters.Until))
 		}
 	}
 
