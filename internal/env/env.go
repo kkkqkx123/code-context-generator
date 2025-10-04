@@ -173,16 +173,16 @@ func GetAllEnvVars() map[string]string {
 	envVars[EnvExcludeBinary] = strconv.FormatBool(GetEnvBool(EnvExcludeBinary, true))
 	envVars[EnvExcludePatterns] = GetEnvWithDefault(EnvExcludePatterns, "")
 	
-	// 安全扫描配置
-	envVars[EnvSecurityEnabled] = strconv.FormatBool(GetEnvBool(EnvSecurityEnabled, true))
+	// 安全扫描配置 - 默认禁用，仅由gitignore规则控制
+	envVars[EnvSecurityEnabled] = strconv.FormatBool(GetEnvBool(EnvSecurityEnabled, false))
 	envVars[EnvSecurityFailOnCritical] = strconv.FormatBool(GetEnvBool(EnvSecurityFailOnCritical, false))
 	envVars[EnvSecurityScanLevel] = GetEnvWithDefault(EnvSecurityScanLevel, "standard")
 	envVars[EnvSecurityReportFormat] = GetEnvWithDefault(EnvSecurityReportFormat, "text")
-	envVars[EnvSecurityDetectCredentials] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectCredentials, true))
-	envVars[EnvSecurityDetectSQLInjection] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectSQLInjection, true))
-	envVars[EnvSecurityDetectXSS] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectXSS, true))
-	envVars[EnvSecurityDetectPathTraversal] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectPathTraversal, true))
-	envVars[EnvSecurityDetectQuality] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectQuality, true))
+	envVars[EnvSecurityDetectCredentials] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectCredentials, false))
+	envVars[EnvSecurityDetectSQLInjection] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectSQLInjection, false))
+	envVars[EnvSecurityDetectXSS] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectXSS, false))
+	envVars[EnvSecurityDetectPathTraversal] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectPathTraversal, false))
+	envVars[EnvSecurityDetectQuality] = strconv.FormatBool(GetEnvBool(EnvSecurityDetectQuality, false))
 	
 	return envVars
 }
@@ -252,9 +252,9 @@ func GetExcludePatterns() string {
 	return GetEnvWithDefault(EnvExcludePatterns, "")
 }
 
-// 获取安全扫描配置
+// 获取安全扫描配置 - 默认禁用，仅由gitignore规则控制
 func GetSecurityEnabled() bool {
-	return GetEnvBool(EnvSecurityEnabled, true)
+	return GetEnvBool(EnvSecurityEnabled, false)
 }
 
 func GetSecurityFailOnCritical() bool {
@@ -270,23 +270,23 @@ func GetSecurityReportFormat() string {
 }
 
 func GetSecurityDetectCredentials() bool {
-	return GetEnvBool(EnvSecurityDetectCredentials, true)
+	return GetEnvBool(EnvSecurityDetectCredentials, false)
 }
 
 func GetSecurityDetectSQLInjection() bool {
-	return GetEnvBool(EnvSecurityDetectSQLInjection, true)
+	return GetEnvBool(EnvSecurityDetectSQLInjection, false)
 }
 
 func GetSecurityDetectXSS() bool {
-	return GetEnvBool(EnvSecurityDetectXSS, true)
+	return GetEnvBool(EnvSecurityDetectXSS, false)
 }
 
 func GetSecurityDetectPathTraversal() bool {
-	return GetEnvBool(EnvSecurityDetectPathTraversal, true)
+	return GetEnvBool(EnvSecurityDetectPathTraversal, false)
 }
 
 func GetSecurityDetectQuality() bool {
-	return GetEnvBool(EnvSecurityDetectQuality, true)
+	return GetEnvBool(EnvSecurityDetectQuality, false)
 }
 func ApplyEnvOverrides(config map[string]interface{}) {
 	envVars := GetAllEnvVars()

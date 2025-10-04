@@ -622,16 +622,16 @@ func GetDefaultConfig() *types.Config {
 			IncludeHash:    false,
 		},
 		Security: types.SecurityConfig{
-			Enabled:     true,
+			Enabled:     false, // 默认禁用，仅由gitignore规则控制
 			ScanLevel:   "standard",
 			FailOnCritical: false,
 			ReportFormat: "text",
 			Detectors: types.DetectorConfig{
-				Credentials:    true,
-				SQLInjection: true,
-				XSS:          true,
-				PathTraversal: true,
-				Quality:      true,
+				Credentials:    false, // 默认禁用
+				SQLInjection: false, // 默认禁用
+				XSS:          false, // 默认禁用
+				PathTraversal: false, // 默认禁用
+				Quality:      false, // 默认禁用
 			},
 		},
 		Formats: types.FormatsConfig{
@@ -729,6 +729,8 @@ func GetDefaultConfig() *types.Config {
 			Format:           "json",
 			OutputDir:        "./output",
 			Encoding:         "utf-8",
+			DefaultFormat:    "xml",
+			FilenameTemplate: "context_{{.timestamp}}.{{.extension}}",
 			IncludeMetadata:  false,
 		},
 	}

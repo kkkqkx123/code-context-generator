@@ -107,7 +107,7 @@ ui:
     max_suggestions: 10
 file_processing:
   includehidden: false
-  maxfilesize: "1MB"
+  maxfilesize: 1048576
   maxdepth: 0
   excludepatterns: []
   includepatterns: []

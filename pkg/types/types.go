@@ -189,13 +189,13 @@ type WalkOptions struct {
 
 // FileProcessingConfig 文件处理配置
 type FileProcessingConfig struct {
-	IncludeHidden   bool
-	MaxFileSize   int64
-	MaxDepth      int
-	ExcludePatterns []string
-	IncludePatterns []string
-	IncludeContent  bool
-	IncludeHash     bool
+	IncludeHidden   bool     `yaml:"include_hidden" json:"include_hidden" toml:"include_hidden"`
+	MaxFileSize     int64    `yaml:"max_file_size" json:"max_file_size" toml:"max_file_size"`
+	MaxDepth        int      `yaml:"max_depth" json:"max_depth" toml:"max_depth"`
+	ExcludePatterns []string `yaml:"exclude_patterns" json:"exclude_patterns" toml:"exclude_patterns"`
+	IncludePatterns []string `yaml:"include_patterns" json:"include_patterns" toml:"include_patterns"`
+	IncludeContent  bool     `yaml:"include_content" json:"include_content" toml:"include_content"`
+	IncludeHash     bool     `yaml:"include_hash" json:"include_hash" toml:"include_hash"`
 }
 
 // PerformanceConfig 性能配置

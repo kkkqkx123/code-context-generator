@@ -100,7 +100,7 @@ func (d *SQLInjectionDetector) Detect(filePath string, content string) []types.S
 
 	patterns := []*regexp.Regexp{
 		regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE).*\+.*`),
-		regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE).*fmt\.Sprintf`),
+		regexp.MustCompile(`(?i)fmt\.Sprintf`),
 		regexp.MustCompile(`(?i)query\(.*\+.*`),
 		regexp.MustCompile(`(?i)exec\(.*\+.*`),
 	}
@@ -109,16 +109,15 @@ func (d *SQLInjectionDetector) Detect(filePath string, content string) []types.S
 	for lineNum, line := range lines {
 		for _, pattern := range patterns {
 			if pattern.MatchString(line) {
-				// 检查是否已经被其他模式匹配过
-				alreadyMatched := false
-				for _, existingIssue := range issues {
-					if existingIssue.Line == lineNum+1 {
-						alreadyMatched = true
+				// 检查是否已经有相同行的SQL注入问题
+				found := false
+				for _, existing := range issues {
+					if existing.Line == lineNum+1 {
+						found = true
 						break
 					}
 				}
-				
-				if !alreadyMatched {
+				if !found {
 					issue := types.SecurityIssue{
 						ID:             "SQL_INJECTION_001",
 						Type:           "SQLInjection",
@@ -264,38 +263,58 @@ func (d *QualityDetector) Detect(filePath string, content string) []types.Securi
 				varName := matches[2]
 				// 简单检查变量是否被使用
 				if !strings.Contains(content, varName) || strings.Count(content, varName) == 1 {
-					issue := types.SecurityIssue{
-						ID:             "QUALITY_001",
-						Type:           "UnusedVariable",
-						Severity:       types.SeverityLow,
-						Message:        "检测到未使用的变量",
-						File:           filePath,
-						Line:           lineNum + 1,
-						Column:         strings.Index(line, varName) + 1,
-						Snippet:        strings.TrimSpace(line),
-						Recommendation: "移除未使用的变量或确保其被正确使用",
-						Confidence:     0.65,
+					// 检查是否已经有相同的未使用变量问题
+					found := false
+					for _, existing := range issues {
+						if existing.ID == "QUALITY_001" && existing.Line == lineNum+1 {
+							found = true
+							break
+						}
 					}
-					issues = append(issues, issue)
+					if !found {
+						issue := types.SecurityIssue{
+							ID:             "QUALITY_001",
+							Type:           "UnusedVariable",
+							Severity:       types.SeverityLow,
+							Message:        "检测到未使用的变量",
+							File:           filePath,
+							Line:           lineNum + 1,
+							Column:         strings.Index(line, varName) + 1,
+							Snippet:        strings.TrimSpace(line),
+							Recommendation: "移除未使用的变量或确保其被正确使用",
+							Confidence:     0.65,
+						}
+						issues = append(issues, issue)
+					}
 				}
 			}
 		}
 
 		// 检测空的错误处理 - 检测注释掉的错误处理
-		if strings.Contains(line, "err != nil") && strings.Contains(line, "//") {
-			issue := types.SecurityIssue{
-				ID:             "QUALITY_002",
-				Type:           "IncompleteErrorHandling",
-				Severity:       types.SeverityMedium,
-				Message:        "检测到不完整的错误处理",
-				File:           filePath,
-				Line:           lineNum + 1,
-				Column:         1,
-				Snippet:        strings.TrimSpace(line),
-				Recommendation: "确保错误被正确处理，避免忽略错误",
-				Confidence:     0.70,
+		if strings.Contains(line, "//") && strings.Contains(line, "错误") && strings.Contains(line, "忽略") {
+			// 检查是否已经有相同的错误处理问题
+			found := false
+			for _, existing := range issues {
+				if existing.ID == "QUALITY_002" && existing.Line == lineNum+1 {
+					found = true
+					break
+				}
 			}
-			issues = append(issues, issue)
+			if !found {
+				issue := types.SecurityIssue{
+					ID:             "QUALITY_002",
+					Type:           "IncompleteErrorHandling",
+					Severity:       types.SeverityMedium,
+					Message:        "检测到不完整的错误处理",
+					File:           filePath,
+					Line:           lineNum + 1,
+					Column:         1,
+					Snippet:        strings.TrimSpace(line),
+					Recommendation: "确保错误被正确处理，避免忽略错误",
+					Confidence:     0.70,
+				}
+				issues = append(issues, issue)
+			}
 		}
 	}
 

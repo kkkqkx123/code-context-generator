@@ -43,6 +43,17 @@ CODE_CONTEXT_EXCLUDE_BINARY=false        # 是否排除二进制文件
 CODE_CONTEXT_INCLUDE_HIDDEN=false        # 是否包含隐藏文件
 CODE_CONTEXT_INCLUDE_CONTENT=true        # 是否包含文件内容
 CODE_CONTEXT_INCLUDE_HASH=false          # 是否包含文件哈希
+
+# 安全扫描配置
+CODE_CONTEXT_SECURITY_ENABLED=false      # 是否启用安全扫描（默认禁用）
+CODE_CONTEXT_SECURITY_FAIL_ON_CRITICAL=false  # 发现严重问题时是否失败
+CODE_CONTEXT_SECURITY_SCAN_LEVEL=standard  # 扫描级别（basic, standard, comprehensive）
+CODE_CONTEXT_SECURITY_REPORT_FORMAT=text  # 报告格式（text, json, xml, html）
+CODE_CONTEXT_SECURITY_DETECT_CREDENTIALS=false  # 是否检测硬编码凭证
+CODE_CONTEXT_SECURITY_DETECT_SQL_INJECTION=false  # 是否检测SQL注入漏洞
+CODE_CONTEXT_SECURITY_DETECT_XSS=false  # 是否检测XSS漏洞
+CODE_CONTEXT_SECURITY_DETECT_PATH_TRAVERSAL=false  # 是否检测路径遍历漏洞
+CODE_CONTEXT_SECURITY_DETECT_QUALITY=false  # 是否检测代码质量问题
 ```
 
 ## 安装

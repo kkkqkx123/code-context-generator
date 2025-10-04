@@ -148,12 +148,38 @@ filters:
   exclude_binary: true
 ```
 
+### 安全扫描配置（Security）
+
+```yaml
+security:
+  enabled: false  # 是否启用安全检查（默认禁用）
+  fail_on_critical: false  # 是否在发现严重问题时失败
+  scan_level: "standard"  # 扫描级别：basic/standard/comprehensive
+  report_format: "text"  # 安全报告格式：text/json/xml/html
+  detectors:
+    credentials: false  # 是否检测硬编码凭证
+    sql_injection: false  # 是否检测SQL注入
+    xss: false  # 是否检测XSS漏洞
+    path_traversal: false  # 是否检测路径遍历
+    quality: false  # 是否检测代码质量问题
+  exclusions:
+    files: []  # 排除的文件列表
+    patterns: []  # 排除的文件模式
+    rules: []  # 排除规则
+  reporting:
+    format: "text"  # 报告格式
+    output_file: ""  # 输出文件路径
+    include_details: true  # 包含详细问题信息
+    show_statistics: true  # 显示扫描统计信息
+```
+
 
 
 ## 环境变量配置
 
 系统支持通过环境变量覆盖配置：
 
+### 基本配置
 - `CONTEXT_DEFAULT_FORMAT`: 默认输出格式
 - `CONTEXT_OUTPUT_DIR`: 输出目录
 - `CONTEXT_FILENAME_TEMPLATE`: 文件名模板
@@ -165,6 +191,17 @@ filters:
 - `CONTEXT_FOLLOW_SYMLINKS`: 是否跟随符号链接
 - `CONTEXT_EXCLUDE_BINARY`: 是否排除二进制文件
 - `CONTEXT_EXCLUDE_PATTERNS`: 排除模式（逗号分隔）
+
+### 安全扫描配置（默认禁用）
+- `CONTEXT_SECURITY_ENABLED`: 是否启用安全检查（默认：false）
+- `CONTEXT_SECURITY_SCAN_LEVEL`: 扫描级别（basic/standard/comprehensive，默认：standard）
+- `CONTEXT_SECURITY_FAIL_ON_CRITICAL`: 是否在发现严重问题时失败（默认：false）
+- `CONTEXT_SECURITY_REPORT_FORMAT`: 安全报告格式（text/json/xml，默认：text）
+- `CONTEXT_SECURITY_DETECT_CREDENTIALS`: 是否检测硬编码凭证（默认：false）
+- `CONTEXT_SECURITY_DETECT_SQL_INJECTION`: 是否检测SQL注入（默认：false）
+- `CONTEXT_SECURITY_DETECT_XSS`: 是否检测XSS漏洞（默认：false）
+- `CONTEXT_SECURITY_DETECT_PATH_TRAVERSAL`: 是否检测路径遍历（默认：false）
+- `CONTEXT_SECURITY_DETECT_QUALITY`: 是否检测代码质量问题（默认：false）
 
 
 ## 完整配置示例

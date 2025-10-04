@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	
+
 	"code-context-generator/pkg/types"
 )
 
 // TestCredentialsDetector 测试凭证检测器
 func TestCredentialsDetector(t *testing.T) {
 	detector := NewCredentialsDetector()
-	
+
 	// 测试用例
 	testCases := []struct {
 		name     string
@@ -63,7 +63,7 @@ func TestCredentialsDetector(t *testing.T) {
 			expected: 0,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			issues := detector.Detect("test.go", tc.content)
@@ -77,7 +77,7 @@ func TestCredentialsDetector(t *testing.T) {
 // TestSQLInjectionDetector 测试SQL注入检测器
 func TestSQLInjectionDetector(t *testing.T) {
 	detector := NewSQLInjectionDetector()
-	
+
 	testCases := []struct {
 		name     string
 		content  string
@@ -108,7 +108,7 @@ func TestSQLInjectionDetector(t *testing.T) {
 			expected: 0,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			issues := detector.Detect("test.go", tc.content)
@@ -122,7 +122,7 @@ func TestSQLInjectionDetector(t *testing.T) {
 // TestXSSDetector 测试XSS检测器
 func TestXSSDetector(t *testing.T) {
 	detector := NewXSSDetector()
-	
+
 	testCases := []struct {
 		name     string
 		content  string
@@ -153,7 +153,7 @@ func TestXSSDetector(t *testing.T) {
 			expected: 0,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			issues := detector.Detect("test.js", tc.content)
@@ -167,7 +167,7 @@ func TestXSSDetector(t *testing.T) {
 // TestPathTraversalDetector 测试路径遍历检测器
 func TestPathTraversalDetector(t *testing.T) {
 	detector := NewPathTraversalDetector()
-	
+
 	testCases := []struct {
 		name     string
 		content  string
@@ -198,7 +198,7 @@ func TestPathTraversalDetector(t *testing.T) {
 			expected: 0,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			issues := detector.Detect("test.go", tc.content)
@@ -212,7 +212,7 @@ func TestPathTraversalDetector(t *testing.T) {
 // TestQualityDetector 测试代码质量检测器
 func TestQualityDetector(t *testing.T) {
 	detector := NewQualityDetector()
-	
+
 	testCases := []struct {
 		name     string
 		content  string
@@ -248,7 +248,7 @@ func TestQualityDetector(t *testing.T) {
 			expected: 0,
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			issues := detector.Detect("test.go", tc.content)
@@ -267,7 +267,7 @@ func TestSecurityScanner(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tempDir)
-	
+
 	// 创建测试文件
 	testFile := filepath.Join(tempDir, "test.go")
 	testContent := `
@@ -288,7 +288,7 @@ func main() {
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// 创建安全配置
 	config := &types.SecurityConfig{
 		Enabled:        true,
@@ -313,29 +313,29 @@ func main() {
 			ShowStatistics: true,
 		},
 	}
-	
+
 	// 创建扫描器
 	scanner := NewSecurityScanner(config)
-	
+
 	// 执行扫描
 	report, err := scanner.Scan(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// 验证报告
 	if report.Summary.TotalFiles == 0 {
 		t.Error("扫描文件数应该大于0")
 	}
-	
+
 	if report.Summary.IssuesFound == 0 {
 		t.Error("应该发现安全问题")
 	}
-	
+
 	if report.Summary.CriticalIssues == 0 {
 		t.Error("应该发现严重问题")
 	}
-	
+
 	// 验证报告内容
 	if len(report.Issues) == 0 {
 		t.Error("报告应该包含问题详情")
@@ -345,19 +345,19 @@ func main() {
 // TestDetectorRegistry 测试检测器注册表
 func TestDetectorRegistry(t *testing.T) {
 	registry := NewDetectorRegistry()
-	
+
 	// 测试获取所有检测器
 	detectors := registry.GetAllDetectors()
 	if len(detectors) == 0 {
 		t.Error("注册表应该包含检测器")
 	}
-	
+
 	// 测试获取特定语言的检测器
 	goDetectors := registry.GetDetectorsForLanguage("go")
 	if len(goDetectors) == 0 {
 		t.Error("应该找到支持Go语言的检测器")
 	}
-	
+
 	// 测试获取特定检测器
 	detector := registry.GetDetector("hardcoded_credentials")
 	if detector == nil {
@@ -376,7 +376,7 @@ func TestSeverityLevelString(t *testing.T) {
 		{types.SeverityHigh, "high"},
 		{types.SeverityCritical, "critical"},
 	}
-	
+
 	for _, tc := range testCases {
 		result := tc.severity.String()
 		if result != tc.expected {
