@@ -40,9 +40,11 @@ func (w *FileSystemWalker) GetFileInfo(path string) (*types.FileInfo, error) {
 		Content:  content,
 	}
 
-	// 只有在配置启用元信息时才填充元信息字段
+	// 总是填充文件大小信息，无论是否包含元信息
+	fileInfo.Size = info.Size()
+	
+	// 只有在配置启用元信息时才填充其他元信息字段
 	if w.config != nil && w.config.Output.IncludeMetadata {
-		fileInfo.Size = info.Size()
 		fileInfo.ModTime = info.ModTime()
 		fileInfo.IsDir = info.IsDir()
 		fileInfo.IsHidden = isHidden

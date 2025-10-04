@@ -27,13 +27,13 @@ func createTestFileInfo() types.FileInfo {
 
 func createTestFolderInfo() types.FolderInfo {
 	return types.FolderInfo{
-		Path:     "test/folder",
-		Name:     "folder",
-		ModTime:  time.Now(),
-		Files:    []types.FileInfo{createTestFileInfo()},
-		Folders:  []types.FolderInfo{}, // 初始化为空切片而不是nil
-		Size:     1024, // 设置文件夹大小
-		Count:    1,    // 设置文件计数
+		Path:    "test/folder",
+		Name:    "folder",
+		ModTime: time.Now(),
+		Files:   []types.FileInfo{createTestFileInfo()},
+		Folders: []types.FolderInfo{}, // 初始化为空切片而不是nil
+		Size:    1024,                 // 设置文件夹大小
+		Count:   1,                    // 设置文件计数
 	}
 }
 
@@ -385,9 +385,9 @@ func TestNewFormatter(t *testing.T) {
 	// 创建测试配置
 	testConfig := &types.Config{
 		Formats: types.FormatsConfig{
-			JSON: types.FormatConfig{Enabled: true},
-			XML:  types.XMLFormatConfig{FormatConfig: types.FormatConfig{Enabled: true}},
-			TOML: types.FormatConfig{Enabled: true},
+			JSON:     types.FormatConfig{Enabled: true},
+			XML:      types.XMLFormatConfig{FormatConfig: types.FormatConfig{Enabled: true}},
+			TOML:     types.FormatConfig{Enabled: true},
 			Markdown: types.FormatConfig{Enabled: true},
 		},
 	}
@@ -443,8 +443,14 @@ func TestJSONFormatter_WithCustomConfig(t *testing.T) {
 			"files":        []interface{}{},
 		},
 	}
-	
-	formatter := NewJSONFormatter(customConfig)
+
+	formatter := NewJSONFormatter(&types.Config{
+		Formats: types.FormatsConfig{
+			JSON: types.FormatConfig{
+				Structure: customConfig.Structure,
+			},
+		},
+	})
 	data := createTestContextData()
 
 	result, err := formatter.Format(data)
@@ -470,8 +476,14 @@ func TestJSONFormatter_WithCustomFields(t *testing.T) {
 			"custom_file_field": "custom_value",
 		},
 	}
-	
-	formatter := NewJSONFormatter(customConfig)
+
+	formatter := NewJSONFormatter(&types.Config{
+		Formats: types.FormatsConfig{
+			JSON: types.FormatConfig{
+				Fields: customConfig.Fields,
+			},
+		},
+	})
 	file := createTestFileInfo()
 
 	result, err := formatter.FormatFile(file)
@@ -505,7 +517,7 @@ func TestXMLFormatter_WithCustomConfig(t *testing.T) {
 			},
 		},
 	}
-	
+
 	formatter := NewXMLFormatter(config)
 	data := createTestContextData()
 
@@ -540,7 +552,7 @@ func TestFormatters_ErrorHandling(t *testing.T) {
 				},
 			},
 		}
-		
+
 		formatter := NewXMLFormatter(config)
 		data := createTestContextData()
 
@@ -562,10 +574,16 @@ func TestFormatters_ErrorHandling(t *testing.T) {
 				"invalid": func() {},
 			},
 		}
-		
-		formatterWithInvalidConfig := NewJSONFormatter(customConfig)
+
+		formatterWithInvalidConfig := NewJSONFormatter(&types.Config{
+			Formats: types.FormatsConfig{
+				JSON: types.FormatConfig{
+					Structure: customConfig.Structure,
+				},
+			},
+		})
 		data := createTestContextData()
-		
+
 		_, err := formatterWithInvalidConfig.Format(data)
 		if err == nil {
 			t.Error("Expected error for invalid JSON custom config")
@@ -640,9 +658,9 @@ func TestFormatters_EmptyData(t *testing.T) {
 func TestFormatterFactory_CaseInsensitive(t *testing.T) {
 	config := &types.Config{
 		Formats: types.FormatsConfig{
-			JSON: types.FormatConfig{},
-			XML:  types.XMLFormatConfig{FormatConfig: types.FormatConfig{}},
-			TOML: types.FormatConfig{},
+			JSON:     types.FormatConfig{},
+			XML:      types.XMLFormatConfig{FormatConfig: types.FormatConfig{}},
+			TOML:     types.FormatConfig{},
 			Markdown: types.FormatConfig{},
 		},
 	}
@@ -650,7 +668,7 @@ func TestFormatterFactory_CaseInsensitive(t *testing.T) {
 
 	// 测试各种大小写变体
 	testCases := []string{"json", "JSON", "Json", "jSoN"}
-	
+
 	for _, format := range testCases {
 		formatter, err := factory.Get(format)
 		if err != nil {

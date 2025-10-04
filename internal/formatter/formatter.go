@@ -99,24 +99,99 @@ func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{}
 				result["XMLName"] = xml.Name{Local: "context"}
 			}
 
+			// 检查是否包含元信息
+			includeMetadata := false
+			// 尝试从完整配置中获取IncludeMetadata设置
+			if f.config != nil {
+				if _, ok := f.config.(*types.FormatConfig); ok {
+					// FormatConfig没有Output字段，需要从父配置获取
+					// 这里使用默认的false值
+					includeMetadata = false
+				}
+			}
+
 			// 映射文件和文件夹数据
 			if filesTag, ok := formatConfig.Structure["files"].(string); ok && filesTag != "" {
-				result[filesTag] = map[string]interface{}{
-					"file": data.Files,
+				if includeMetadata {
+					result[filesTag] = map[string]interface{}{
+						"file": data.Files,
+					}
+				} else {
+					// 简化文件信息
+					simplifiedFiles := make([]SimplifiedFileInfo, len(data.Files))
+					for i, file := range data.Files {
+						simplifiedFiles[i] = SimplifiedFileInfo{
+							Path:    file.Path,
+							Name:    file.Name,
+							Size:    file.Size,
+							Content: file.Content,
+						}
+					}
+					result[filesTag] = map[string]interface{}{
+						"file": simplifiedFiles,
+					}
 				}
 			} else {
-				result["files"] = map[string]interface{}{
-					"file": data.Files,
+				if includeMetadata {
+					result["files"] = map[string]interface{}{
+						"file": data.Files,
+					}
+				} else {
+					// 简化文件信息
+					simplifiedFiles := make([]SimplifiedFileInfo, len(data.Files))
+					for i, file := range data.Files {
+						simplifiedFiles[i] = SimplifiedFileInfo{
+							Path:    file.Path,
+							Name:    file.Name,
+							Size:    file.Size,
+							Content: file.Content,
+						}
+					}
+					result["files"] = map[string]interface{}{
+						"file": simplifiedFiles,
+					}
 				}
 			}
 
 			if foldersTag, ok := formatConfig.Structure["folders"].(string); ok && foldersTag != "" {
-				result[foldersTag] = map[string]interface{}{
-					"folder": data.Folders,
+				if includeMetadata {
+					result[foldersTag] = map[string]interface{}{
+						"folder": data.Folders,
+					}
+				} else {
+					// 简化文件夹信息
+					simplifiedFolders := make([]SimplifiedFolderInfo, len(data.Folders))
+					for i, folder := range data.Folders {
+						simplifiedFolders[i] = SimplifiedFolderInfo{
+							Path:  folder.Path,
+							Name:  folder.Name,
+							Size:  folder.Size,
+							Count: folder.Count,
+						}
+					}
+					result[foldersTag] = map[string]interface{}{
+						"folder": simplifiedFolders,
+					}
 				}
 			} else {
-				result["folders"] = map[string]interface{}{
-					"folder": data.Folders,
+				if includeMetadata {
+					result["folders"] = map[string]interface{}{
+						"folder": data.Folders,
+					}
+				} else {
+					// 简化文件夹信息
+					simplifiedFolders := make([]SimplifiedFolderInfo, len(data.Folders))
+					for i, folder := range data.Folders {
+						simplifiedFolders[i] = SimplifiedFolderInfo{
+							Path:  folder.Path,
+							Name:  folder.Name,
+							Size:  folder.Size,
+							Count: folder.Count,
+						}
+					}
+					result["folders"] = map[string]interface{}{
+						"folder": simplifiedFolders,
+					}
 				}
 			}
 
@@ -129,21 +204,104 @@ func (f *BaseFormatter) applyCustomStructure(data types.ContextData) interface{}
 		}
 	}
 
-	// 返回可序列化的结构，避免map[string]interface{}
+	// 检查是否包含元信息
+	includeMetadata := false
+	// 尝试从完整配置中获取IncludeMetadata设置
+	if f.config != nil {
+		if _, ok := f.config.(*types.FormatConfig); ok {
+			// FormatConfig没有Output字段，需要从父配置获取
+			// 这里使用默认的false值
+			includeMetadata = false
+		}
+	}
+
+	if includeMetadata {
+		// 返回可序列化的结构，避免map[string]interface{}
+		return struct {
+			Files       []types.FileInfo       `json:"files"`
+			Folders     []types.FolderInfo     `json:"folders"`
+			FileCount   int                    `json:"file_count"`
+			FolderCount int                    `json:"folder_count"`
+			TotalSize   int64                  `json:"total_size"`
+			Metadata    map[string]interface{} `json:"metadata"`
+		}{
+			Files:       data.Files,
+			Folders:     data.Folders,
+			FileCount:   data.FileCount,
+			FolderCount: data.FolderCount,
+			TotalSize:   data.TotalSize,
+			Metadata:    data.Metadata,
+		}
+	} else {
+		// 不包含元信息的简化结构
+		simplifiedFiles := make([]SimplifiedFileInfo, len(data.Files))
+		for i, file := range data.Files {
+			simplifiedFiles[i] = SimplifiedFileInfo{
+				Path:    file.Path,
+				Name:    file.Name,
+				Size:    file.Size,
+				Content: file.Content,
+			}
+		}
+		
+		simplifiedFolders := make([]SimplifiedFolderInfo, len(data.Folders))
+		for i, folder := range data.Folders {
+			simplifiedFolders[i] = SimplifiedFolderInfo{
+				Path:  folder.Path,
+				Name:  folder.Name,
+				Size:  folder.Size,
+				Count: folder.Count,
+			}
+		}
+		
+		return struct {
+			Files       []SimplifiedFileInfo   `json:"files"`
+			Folders     []SimplifiedFolderInfo `json:"folders"`
+			FileCount   int                    `json:"file_count"`
+			FolderCount int                    `json:"folder_count"`
+			TotalSize   int64                  `json:"total_size"`
+		}{
+			Files:       simplifiedFiles,
+			Folders:     simplifiedFolders,
+			FileCount:   data.FileCount,
+			FolderCount: data.FolderCount,
+			TotalSize:   data.TotalSize,
+		}
+	}
+
+	// 默认返回简化结构
+	simplifiedFiles := make([]SimplifiedFileInfo, len(data.Files))
+	for i, file := range data.Files {
+		simplifiedFiles[i] = SimplifiedFileInfo{
+			Path:    file.Path,
+			Name:    file.Name,
+			Size:    file.Size,
+			Content: file.Content,
+		}
+	}
+	
+	simplifiedFolders := make([]SimplifiedFolderInfo, len(data.Folders))
+	for i, folder := range data.Folders {
+		simplifiedFolders[i] = SimplifiedFolderInfo{
+			Path:  folder.Path,
+			Name:  folder.Name,
+			Size:  folder.Size,
+			Count: folder.Count,
+		}
+	}
+	
 	return struct {
-		Files       []types.FileInfo       `json:"files"`
-		Folders     []types.FolderInfo     `json:"folders"`
+		Files       []SimplifiedFileInfo   `json:"files"`
+		Folders     []SimplifiedFolderInfo `json:"folders"`
 		FileCount   int                    `json:"file_count"`
 		FolderCount int                    `json:"folder_count"`
 		TotalSize   int64                  `json:"total_size"`
-		Metadata    map[string]interface{} `json:"metadata"`
 	}{
-		Files:       data.Files,
-		Folders:     data.Folders,
+		Files:       simplifiedFiles,
+		Folders:     simplifiedFolders,
 		FileCount:   data.FileCount,
 		FolderCount: data.FolderCount,
 		TotalSize:   data.TotalSize,
-		Metadata:    data.Metadata,
 	}
 }
 
@@ -296,71 +454,165 @@ func (f *BaseFormatter) applyCustomFields(file types.FileInfo) interface{} {
 // JSONFormatter JSON格式转换器
 type JSONFormatter struct {
 	BaseFormatter
+	config *types.Config // 修改为接收完整的Config
 }
 
 // NewJSONFormatter 创建JSON格式转换器
-func NewJSONFormatter(config *types.FormatConfig) Formatter {
+func NewJSONFormatter(config *types.Config) Formatter { // 修改参数类型
+	var formatConfig *types.FormatConfig
+	if config != nil {
+		formatConfig = &config.Formats.JSON
+	}
 	return &JSONFormatter{
 		BaseFormatter: BaseFormatter{
 			name:        "JSON",
 			description: "JavaScript Object Notation format",
-			config:      config,
+			config:      formatConfig,
 		},
+		config: config, // 保存完整的配置
 	}
 }
 
 // Format 格式化上下文数据
 func (f *JSONFormatter) Format(data types.ContextData) (string, error) {
-	// 尝试将配置转换为FormatConfig
-	if f.config != nil {
-		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil && formatConfig.Structure != nil {
-			// 使用自定义结构
-			customData := f.applyCustomStructure(data)
-			output, err := json.MarshalIndent(customData, "", "  ")
-			if err != nil {
-				return "", fmt.Errorf("JSON格式化失败: %w", err)
+	var outputData interface{}
+	
+	// 检查是否有真正的自定义结构配置（不只是默认的file/folder映射）
+	hasCustomStructure := false
+	if f.config != nil && f.config.Formats.JSON.Structure != nil {
+		// 如果有超过2个字段，或者字段值不是默认的file/folder，则认为有自定义结构
+		if len(f.config.Formats.JSON.Structure) > 2 {
+			hasCustomStructure = true
+		} else {
+			// 检查是否有非默认的字段映射
+			for key, value := range f.config.Formats.JSON.Structure {
+				if key != "file" && key != "folder" {
+					hasCustomStructure = true
+					break
+				}
+				if key == "file" && value != "file" {
+					hasCustomStructure = true
+					break
+				}
+				if key == "folder" && value != "folder" {
+					hasCustomStructure = true
+					break
+				}
 			}
-			return string(output), nil
+		}
+	}
+	
+	if hasCustomStructure {
+		// 使用自定义结构
+		outputData = f.applyCustomStructure(data)
+	} else {
+		// 检查是否包含元信息
+		includeMetadata := false // 默认不包含元信息
+		if f.config != nil {
+			includeMetadata = f.config.Output.IncludeMetadata
+		}
+
+		if includeMetadata {
+			// 包含元信息
+			outputData = data
+		} else {
+			// 不包含元信息的简化结构
+			simplifiedFiles := make([]SimplifiedFileInfo, len(data.Files))
+			for i, file := range data.Files {
+				simplifiedFiles[i] = SimplifiedFileInfo{
+					Path:    file.Path,
+					Name:    file.Name,
+					Size:    file.Size,
+					Content: file.Content,
+				}
+			}
+			
+			simplifiedFolders := make([]SimplifiedFolderInfo, len(data.Folders))
+			for i, folder := range data.Folders {
+				simplifiedFolders[i] = SimplifiedFolderInfo{
+					Path:  folder.Path,
+					Name:  folder.Name,
+					Size:  folder.Size,
+					Count: folder.Count,
+				}
+			}
+			
+			outputData = struct {
+				Files   []SimplifiedFileInfo   `json:"files"`
+				Folders []SimplifiedFolderInfo `json:"folders"`
+				FileCount   int                    `json:"file_count"`
+				FolderCount int                    `json:"folder_count"`
+				TotalSize   int64                  `json:"total_size"`
+			}{
+				Files:       simplifiedFiles,
+				Folders:     simplifiedFolders,
+				FileCount:   data.FileCount,
+				FolderCount: data.FolderCount,
+				TotalSize:   data.TotalSize,
+			}
 		}
 	}
 
-	// 默认结构 - 创建安全的数据副本避免nil引用
-	safeData := struct {
-		Files       []types.FileInfo       `json:"files"`
-		Folders     []types.FolderInfo     `json:"folders"`
-		FileCount   int                    `json:"file_count"`
-		FolderCount int                    `json:"folder_count"`
-		TotalSize   int64                  `json:"total_size"`
-		Metadata    map[string]interface{} `json:"metadata"`
-	}{
-		Files:       data.Files,
-		Folders:     data.Folders,
-		FileCount:   data.FileCount,
-		FolderCount: data.FolderCount,
-		TotalSize:   data.TotalSize,
-		Metadata:    data.Metadata,
-	}
-
-	output, err := json.MarshalIndent(safeData, "", "  ")
+	output, err := json.MarshalIndent(outputData, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("JSON格式化失败: %w", err)
 	}
 
 	// 检查配置中是否指定了编码格式
-	if f.config != nil {
-		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil {
-			if formatConfig.Encoding != "" && formatConfig.Encoding != "utf-8" {
-				// 转换编码
-				encodedOutput, err := encoding.ConvertEncoding(string(output), formatConfig.Encoding)
-				if err != nil {
-					return "", fmt.Errorf("编码转换失败: %w", err)
-				}
-				return encodedOutput, nil
-			}
+	if f.config != nil && f.config.Formats.JSON.Encoding != "" && f.config.Formats.JSON.Encoding != "utf-8" {
+		// 转换编码
+		encodedOutput, err := encoding.ConvertEncoding(string(output), f.config.Formats.JSON.Encoding)
+		if err != nil {
+			return "", fmt.Errorf("编码转换失败: %w", err)
 		}
+		return encodedOutput, nil
 	}
 
 	return string(output), nil
+}
+
+// SimplifiedFileInfo 简化的文件信息结构（不包含元信息）
+type SimplifiedFileInfo struct {
+	Path    string `json:"path"`
+	Name    string `json:"name"`
+	Size    int64  `json:"size"`
+	Content string `json:"content"`
+}
+
+// SimplifiedFolderInfo 简化的文件夹信息结构（不包含元信息）
+type SimplifiedFolderInfo struct {
+	Path  string `json:"path"`
+	Name  string `json:"name"`
+	Size  int64  `json:"size"`
+	Count int    `json:"count"`
+}
+
+// simplifyFiles 简化文件信息，移除元信息字段
+func (f *BaseFormatter) simplifyFiles(files []types.FileInfo) []SimplifiedFileInfo {
+	simplified := make([]SimplifiedFileInfo, len(files))
+	for i, file := range files {
+		simplified[i] = SimplifiedFileInfo{
+			Path:    file.Path,
+			Name:    file.Name,
+			Size:    file.Size,
+			Content: file.Content,
+		}
+	}
+	return simplified
+}
+
+// simplifyFolders 简化文件夹信息，移除元信息字段
+func (f *BaseFormatter) simplifyFolders(folders []types.FolderInfo) []SimplifiedFolderInfo {
+	simplified := make([]SimplifiedFolderInfo, len(folders))
+	for i, folder := range folders {
+		simplified[i] = SimplifiedFolderInfo{
+			Path:  folder.Path,
+			Name:  folder.Name,
+			Size:  folder.Size,
+			Count: folder.Count,
+		}
+	}
+	return simplified
 }
 
 // FormatFile 格式化单个文件
@@ -370,20 +622,30 @@ func (f *JSONFormatter) FormatFile(file types.FileInfo) (string, error) {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
 
-	// 尝试将配置转换为FormatConfig
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
 	if f.config != nil {
-		if formatConfig, ok := f.config.(*types.FormatConfig); ok && formatConfig != nil && formatConfig.Fields != nil {
-			// 使用自定义字段映射
-			customFile := f.applyCustomFields(file)
-			output, err := json.MarshalIndent(customFile, "", "  ")
-			if err != nil {
-				return "", fmt.Errorf("JSON文件格式化失败: %w", err)
-			}
-			return string(output), nil
-		}
+		includeMetadata = f.config.Output.IncludeMetadata
 	}
 
-	output, err := json.MarshalIndent(file, "", "  ")
+	var output []byte
+	var err error
+
+	if includeMetadata {
+		// 使用自定义字段映射
+		customFile := f.applyCustomFields(file)
+		output, err = json.MarshalIndent(customFile, "", "  ")
+	} else {
+		// 不包含元信息的简化结构
+		simplifiedFile := SimplifiedFileInfo{
+			Path:    file.Path,
+			Name:    file.Name,
+			Size:    file.Size,
+			Content: file.Content,
+		}
+		output, err = json.MarshalIndent(simplifiedFile, "", "  ")
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("JSON文件格式化失败: %w", err)
 	}
@@ -392,7 +654,28 @@ func (f *JSONFormatter) FormatFile(file types.FileInfo) (string, error) {
 
 // FormatFolder 格式化文件夹
 func (f *JSONFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
-	output, err := json.MarshalIndent(folder, "", "  ")
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
+	var output []byte
+	var err error
+
+	if includeMetadata {
+		output, err = json.MarshalIndent(folder, "", "  ")
+	} else {
+		// 不包含元信息的简化结构
+		simplifiedFolder := SimplifiedFolderInfo{
+			Path:  folder.Path,
+			Name:  folder.Name,
+			Size:  folder.Size,
+			Count: folder.Count,
+		}
+		output, err = json.MarshalIndent(simplifiedFolder, "", "  ")
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("JSON文件夹格式化失败: %w", err)
 	}
@@ -423,22 +706,10 @@ func NewXMLFormatter(config *types.Config) Formatter {
 
 // Format 格式化上下文数据
 func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
-	// 创建可序列化的结构，避免map[string]interface{}
-	type SerializableContextData struct {
-		XMLName     xml.Name           `xml:"context"`
-		Files       []types.FileInfo   `xml:"files>file"`
-		Folders     []types.FolderInfo `xml:"folders>folder"`
-		FileCount   int                `xml:"file_count"`
-		FolderCount int                `xml:"folder_count"`
-		TotalSize   int64              `xml:"total_size"`
-	}
-
-	serializableData := SerializableContextData{
-		Files:       data.Files,
-		Folders:     data.Folders,
-		FileCount:   data.FileCount,
-		FolderCount: data.FolderCount,
-		TotalSize:   data.TotalSize,
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
 	}
 
 	if f.config != nil && f.config.Formats.XML.Structure != nil {
@@ -451,8 +722,50 @@ func (f *XMLFormatter) Format(data types.ContextData) (string, error) {
 		return xml.Header + string(output), nil
 	}
 
-	// 默认结构
-	output, err := xml.MarshalIndent(serializableData, "", "  ")
+	// 根据是否包含元信息创建不同的数据结构
+	var output []byte
+	var err error
+
+	if includeMetadata {
+		// 包含元信息的默认结构
+		type SerializableContextData struct {
+			XMLName     xml.Name           `xml:"context"`
+			Files       []types.FileInfo   `xml:"files>file"`
+			Folders     []types.FolderInfo `xml:"folders>folder"`
+			FileCount   int                `xml:"file_count"`
+			FolderCount int                `xml:"folder_count"`
+			TotalSize   int64              `xml:"total_size"`
+		}
+
+		serializableData := SerializableContextData{
+			Files:       data.Files,
+			Folders:     data.Folders,
+			FileCount:   data.FileCount,
+			FolderCount: data.FolderCount,
+			TotalSize:   data.TotalSize,
+		}
+		output, err = xml.MarshalIndent(serializableData, "", "  ")
+	} else {
+		// 不包含元信息的简化结构
+		type SimplifiedContextData struct {
+			XMLName     xml.Name               `xml:"context"`
+			Files       []SimplifiedFileInfo   `xml:"files>file"`
+			Folders     []SimplifiedFolderInfo `xml:"folders>folder"`
+			FileCount   int                    `xml:"file_count"`
+			FolderCount int                    `xml:"folder_count"`
+			TotalSize   int64                  `xml:"total_size"`
+		}
+		
+		simplifiedData := SimplifiedContextData{
+			Files:       f.simplifyFiles(data.Files),
+			Folders:     f.simplifyFolders(data.Folders),
+			FileCount:   data.FileCount,
+			FolderCount: data.FolderCount,
+			TotalSize:   data.TotalSize,
+		}
+		output, err = xml.MarshalIndent(simplifiedData, "", "  ")
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("XML格式化失败: %w", err)
 	}
@@ -479,13 +792,35 @@ func (f *XMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 		file.Content = "[二进制文件 - 内容未显示]"
 	}
 
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
 	// 根据内容处理选项处理文件内容
 	if f.config != nil && f.config.Formats.XML.Formatting.ContentHandling != "" {
 		return formatFileWithContentHandling(file, f.config.Formats.XML.Formatting.ContentHandling)
 	}
 
-	// 默认使用标准XML序列化
-	output, err := xml.MarshalIndent(file, "", "  ")
+	// 根据是否包含元信息创建不同的数据结构
+	var output []byte
+	var err error
+
+	if includeMetadata {
+		// 包含元信息的默认结构
+		output, err = xml.MarshalIndent(file, "", "  ")
+	} else {
+		// 不包含元信息的简化结构
+		simplifiedFile := SimplifiedFileInfo{
+			Path:    file.Path,
+			Name:    file.Name,
+			Size:    file.Size,
+			Content: file.Content,
+		}
+		output, err = xml.MarshalIndent(simplifiedFile, "", "  ")
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("XML文件格式化失败: %w", err)
 	}
@@ -494,13 +829,35 @@ func (f *XMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 
 // FormatFolder 格式化文件夹
 func (f *XMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
 	// 如果配置了内容处理选项，使用相应的处理方式
 	if f.config != nil && f.config.Formats.XML.Formatting.ContentHandling != "" {
 		return formatFolderWithContentHandling(folder, f.config.Formats.XML.Formatting.ContentHandling)
 	}
 
-	// 默认使用标准XML序列化
-	output, err := xml.MarshalIndent(folder, "", "  ")
+	// 根据是否包含元信息创建不同的数据结构
+	var output []byte
+	var err error
+
+	if includeMetadata {
+		// 包含元信息的默认结构
+		output, err = xml.MarshalIndent(folder, "", "  ")
+	} else {
+		// 不包含元信息的简化结构
+		simplifiedFolder := SimplifiedFolderInfo{
+			Path:  folder.Path,
+			Name:  folder.Name,
+			Size:  folder.Size,
+			Count: folder.Count,
+		}
+		output, err = xml.MarshalIndent(simplifiedFolder, "", "  ")
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("XML文件夹格式化失败: %w", err)
 	}
@@ -511,27 +868,39 @@ func (f *XMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 type TOMLFormatter struct {
 	BaseFormatter
 	encoding string
+	config   *types.Config // 添加完整配置引用
 }
 
 // NewTOMLFormatter 创建TOML格式转换器
-func NewTOMLFormatter(config *types.FormatConfig) Formatter {
+func NewTOMLFormatter(config *types.Config) Formatter { // 修改参数类型
 	encoding := "utf-8"
-	if config != nil && config.Encoding != "" {
-		encoding = config.Encoding
+	var formatConfig *types.FormatConfig
+	if config != nil {
+		formatConfig = &config.Formats.TOML
+		if formatConfig.Encoding != "" {
+			encoding = formatConfig.Encoding
+		}
 	}
 	return &TOMLFormatter{
 		BaseFormatter: BaseFormatter{
 			name:        "TOML",
 			description: "Tom's Obvious, Minimal Language format",
-			config:      config,
+			config:      formatConfig,
 		},
 		encoding: encoding,
+		config:   config, // 保存完整配置
 	}
 }
 
 // Format 格式化上下文数据
 func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 	var buf strings.Builder
+
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
 
 	// 写入文件部分
 	if len(data.Files) > 0 {
@@ -542,6 +911,11 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 			buf.WriteString(fmt.Sprintf("    name = \"%s\"\n", file.Name))
 			buf.WriteString(fmt.Sprintf("    size = %d\n", file.Size))
 			buf.WriteString(fmt.Sprintf("    content = \"%s\"\n", encoding.EscapeTOMLString(file.Content)))
+			
+			if includeMetadata {
+				buf.WriteString(fmt.Sprintf("    mod_time = \"%s\"\n", file.ModTime.Format(time.RFC3339)))
+			}
+			
 			if i < len(data.Files)-1 {
 				buf.WriteString("\n")
 			}
@@ -556,6 +930,11 @@ func (f *TOMLFormatter) Format(data types.ContextData) (string, error) {
 			buf.WriteString(fmt.Sprintf("    path = \"%s\"\n", folder.Path))
 			buf.WriteString(fmt.Sprintf("    name = \"%s\"\n", folder.Name))
 			buf.WriteString(fmt.Sprintf("    file_count = %d\n", len(folder.Files)))
+			
+			if includeMetadata {
+				buf.WriteString(fmt.Sprintf("    mod_time = \"%s\"\n", folder.ModTime.Format(time.RFC3339)))
+			}
+			
 			if i < len(data.Folders)-1 {
 				buf.WriteString("\n")
 			}
@@ -591,7 +970,15 @@ func (f *TOMLFormatter) FormatFile(file types.FileInfo) (string, error) {
 		buf.WriteString(fmt.Sprintf("content = \"%s\"\n", encoding.EscapeTOMLString(file.Content)))
 	}
 
-	buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", file.ModTime.Format(time.RFC3339)))
+	// 检查是否包含元信息
+	includeMetadata := false // 默认不包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
+	if includeMetadata {
+		buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", file.ModTime.Format(time.RFC3339)))
+	}
 
 	return buf.String(), nil
 }
@@ -603,7 +990,16 @@ func (f *TOMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 	buf.WriteString(fmt.Sprintf("path = \"%s\"\n", folder.Path))
 	buf.WriteString(fmt.Sprintf("name = \"%s\"\n", folder.Name))
 	buf.WriteString(fmt.Sprintf("file_count = %d\n", len(folder.Files)))
-	buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", folder.ModTime.Format(time.RFC3339)))
+
+	// 检查是否包含元信息
+	includeMetadata := true // 默认包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
+	if includeMetadata {
+		buf.WriteString(fmt.Sprintf("mod_time = \"%s\"\n", folder.ModTime.Format(time.RFC3339)))
+	}
 
 	return buf.String(), nil
 }
@@ -612,27 +1008,39 @@ func (f *TOMLFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 type MarkdownFormatter struct {
 	BaseFormatter
 	encoding string
+	config   *types.Config // 添加完整配置引用
 }
 
 // NewMarkdownFormatter 创建Markdown格式转换器
-func NewMarkdownFormatter(config *types.FormatConfig) Formatter {
+func NewMarkdownFormatter(config *types.Config) Formatter { // 修改参数类型
 	encoding := "utf-8"
-	if config != nil && config.Encoding != "" {
-		encoding = config.Encoding
+	var formatConfig *types.FormatConfig
+	if config != nil {
+		formatConfig = &config.Formats.Markdown
+		if formatConfig.Encoding != "" {
+			encoding = formatConfig.Encoding
+		}
 	}
 	return &MarkdownFormatter{
 		BaseFormatter: BaseFormatter{
 			name:        "Markdown",
 			description: "Markdown format with code blocks",
-			config:      config,
+			config:      formatConfig,
 		},
 		encoding: encoding,
+		config:   config, // 保存完整配置
 	}
 }
 
 // Format 格式化上下文数据
 func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 	var sb strings.Builder
+
+	// 检查是否包含元信息
+	includeMetadata := true // 默认包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
 
 	// 添加标题
 	sb.WriteString("# 代码上下文\n\n")
@@ -645,7 +1053,9 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 			sb.WriteString(fmt.Sprintf("### %s\n\n", file.Name))
 			sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", file.Path))
 			sb.WriteString(fmt.Sprintf("- **大小**: %d 字节\n", file.Size))
-			sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
+			if includeMetadata {
+				sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
+			}
 
 			// 添加代码块（只针对文本文件）
 			if !file.IsBinary {
@@ -669,7 +1079,9 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 			sb.WriteString(fmt.Sprintf("### %s\n\n", folder.Name))
 			sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", folder.Path))
 			sb.WriteString(fmt.Sprintf("- **文件数**: %d\n", len(folder.Files)))
-			sb.WriteString(fmt.Sprintf("- **文件数**: %d\n\n", len(folder.Files)))
+			if includeMetadata {
+				sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", folder.ModTime.Format(time.RFC3339)))
+			}
 
 			// 添加文件夹中的文件
 			if len(folder.Files) > 0 {
@@ -700,10 +1112,18 @@ func (f *MarkdownFormatter) Format(data types.ContextData) (string, error) {
 func (f *MarkdownFormatter) FormatFile(file types.FileInfo) (string, error) {
 	var sb strings.Builder
 
+	// 检查是否包含元信息
+	includeMetadata := true // 默认包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
 	sb.WriteString(fmt.Sprintf("## %s\n\n", file.Name))
 	sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", file.Path))
 	sb.WriteString(fmt.Sprintf("- **大小**: %d 字节\n", file.Size))
-	sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
+	if includeMetadata {
+		sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", file.ModTime.Format(time.RFC3339)))
+	}
 
 	// 添加代码块（只针对文本文件）
 	if !file.IsBinary {
@@ -725,12 +1145,20 @@ func (f *MarkdownFormatter) FormatFile(file types.FileInfo) (string, error) {
 func (f *MarkdownFormatter) FormatFolder(folder types.FolderInfo) (string, error) {
 	var sb strings.Builder
 
+	// 检查是否包含元信息
+	includeMetadata := true // 默认包含元信息
+	if f.config != nil {
+		includeMetadata = f.config.Output.IncludeMetadata
+	}
+
 	sb.WriteString(fmt.Sprintf("## %s\n\n", folder.Name))
 	sb.WriteString(fmt.Sprintf("- **路径**: `%s`\n", folder.Path))
 	sb.WriteString(fmt.Sprintf("- **文件数**: %d\n", len(folder.Files)))
-	sb.WriteString(fmt.Sprintf("- **文件数**: %d\n\n", len(folder.Files)))
+	if includeMetadata {
+		sb.WriteString(fmt.Sprintf("- **修改时间**: %s\n\n", folder.ModTime.Format(time.RFC3339)))
+	}
 
-	// 添加文件列表
+	// 添加文件列表（始终显示）
 	if len(folder.Files) > 0 {
 		sb.WriteString("### 文件列表\n\n")
 		for _, file := range folder.Files {
@@ -786,12 +1214,9 @@ func NewFormatter(format string, config *types.Config) (Formatter, error) {
 // CreateDefaultFactory 创建默认的格式转换器工厂
 func CreateDefaultFactory(config *types.Config) *FormatterFactory {
 	factory := NewFormatterFactory()
-
-	// 注册所有支持的格式
-	factory.Register(constants.FormatJSON, NewJSONFormatter(&config.Formats.JSON))
+	factory.Register(constants.FormatJSON, NewJSONFormatter(config)) // 修复调用
 	factory.Register(constants.FormatXML, NewXMLFormatter(config))
-	factory.Register(constants.FormatTOML, NewTOMLFormatter(&config.Formats.TOML))
-	factory.Register(constants.FormatMarkdown, NewMarkdownFormatter(&config.Formats.Markdown))
-
+	factory.Register(constants.FormatTOML, NewTOMLFormatter(config))
+	factory.Register(constants.FormatMarkdown, NewMarkdownFormatter(config))
 	return factory
 }

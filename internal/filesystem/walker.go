@@ -187,10 +187,8 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 				if !fileExists {
 					contextData.Files = append(contextData.Files, *fileInfo)
 					contextData.FileCount++
-					// 只有在包含元信息时才累加文件大小
-					if w.config != nil && w.config.Output.IncludeMetadata {
-						contextData.TotalSize += fileInfo.Size
-					}
+					// 总是累加文件大小，无论是否包含元信息
+					contextData.TotalSize += fileInfo.Size
 				}
 				mu.Unlock()
 
@@ -248,13 +246,11 @@ func (w *FileSystemWalker) WalkWithProgress(rootPath string, options *types.Walk
 					}
 
 					mu.Lock()
-				contextData.Folders = append(contextData.Folders, *folderInfo)
-				contextData.FolderCount++
-				// 只有在包含元信息时才累加文件夹大小
-				if w.config != nil && w.config.Output.IncludeMetadata {
+					contextData.Folders = append(contextData.Folders, *folderInfo)
+					contextData.FolderCount++
+					// 总是累加文件夹大小，无论是否包含元信息
 					contextData.TotalSize += folderInfo.Size
-				}
-				mu.Unlock()
+					mu.Unlock()
 				}
 			}
 		}
@@ -413,41 +409,69 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 	// 用于跟踪已处理的文件夹，避免重复
 	processedFolders := make(map[string]bool)
 
-	// 过滤并处理指定的文件
-	processedFiles := 0
-	totalFiles := len(files)
-	
 	// 用于跟踪已处理的文件，避免重复
 	processedFilesMap := make(map[string]bool)
 
-	for _, filePath := range files {
+	// 使用队列来处理文件和目录，支持递归处理
+	fileQueue := make([]string, len(files))
+	copy(fileQueue, files)
+	
+	processedFiles := 0
+	totalFiles := len(fileQueue)
+
+	for len(fileQueue) > 0 {
+		// 从队列头部取出一个路径
+		filePath := fileQueue[0]
+		fileQueue = fileQueue[1:]
+
+		// 将路径转换为绝对路径
+		absPath, err := filepath.Abs(filePath)
+		if err != nil {
+			continue // 跳过无法解析的路径
+		}
+
 		// 验证文件存在
-		info, err := os.Stat(filePath)
+		info, err := os.Stat(absPath)
 		if err != nil {
 			continue // 跳过不存在的文件
 		}
 
-		// 只处理文件，跳过目录
+		// 处理目录：如果路径是目录，则处理目录中的所有文件
 		if info.IsDir() {
-			continue
+			dirPath := absPath
+			// 读取目录中的所有文件
+			entries, err := os.ReadDir(dirPath)
+			if err != nil {
+				continue // 跳过无法读取的目录
+			}
+
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					// 将目录中的文件添加到队列尾部
+					nestedFilePath := filepath.Join(dirPath, entry.Name())
+					// 在processMultipleFiles模式下，总是包含目录中的文件
+					// 不调用shouldIncludeFile检查，因为这会过滤掉不在原始列表中的文件
+					fileQueue = append(fileQueue, nestedFilePath)
+					totalFiles++
+				}
+			}
+			continue // 跳过目录本身，只处理其中的文件
 		}
 
 		// 检查文件是否已经处理过（去重）
-		absPath, err := filepath.Abs(filePath)
-		if err != nil {
-			continue
-		}
 		if processedFilesMap[absPath] {
 			continue // 跳过已处理的文件
 		}
 
 		// 检查是否应该包含此文件
-		if !w.shouldIncludeFile(filePath, filepath.Dir(filePath), options) {
+		// 在processMultipleFiles模式下，我们使用简化的检查逻辑
+		// 只检查文件大小和排除模式，不检查MultipleFiles列表
+		if !w.shouldIncludeFileInMultipleMode(absPath, filepath.Dir(absPath), options) {
 			continue
 		}
 
 		// 获取文件信息
-		fileInfo, err := w.GetFileInfo(filePath)
+		fileInfo, err := w.GetFileInfo(absPath)
 		if err != nil {
 			continue // 跳过无法获取信息的文件
 		}
@@ -459,7 +483,7 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 		processedFiles++
 
 		// 获取文件所在目录的路径
-		dirPath := filepath.Dir(filePath)
+		dirPath := filepath.Dir(absPath)
 		
 		// 如果目录还未处理过，添加文件夹信息
 		if !processedFolders[dirPath] {
@@ -494,7 +518,7 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 
 		// 更新进度
 		if progressCallback != nil {
-			progressCallback(processedFiles, totalFiles, filepath.Base(filePath))
+			progressCallback(processedFiles, totalFiles, filepath.Base(absPath))
 		}
 	}
 
@@ -504,4 +528,84 @@ func (w *FileSystemWalker) processMultipleFiles(files []string, options *types.W
 	}
 
 	return &contextData, nil
+}
+
+// shouldIncludeFileInMultipleMode 在-m模式下检查是否应该包含文件
+// 这个函数简化了检查逻辑，不检查MultipleFiles列表
+func (w *FileSystemWalker) shouldIncludeFileInMultipleMode(path string, rootPath string, options *types.WalkOptions) bool {
+	// 检查文件大小
+	if !w.FilterBySize(path, options.MaxFileSize) {
+		return false
+	}
+
+	// 检查是否为二进制文件（如果启用了二进制文件排除）
+	if options.ExcludeBinary && utils.IsBinaryFile(path) {
+		return false
+	}
+
+	// 检查包含模式
+	if len(options.IncludePatterns) > 0 {
+		matched := false
+		filename := filepath.Base(path)
+		for _, pattern := range options.IncludePatterns {
+			if matchedPattern, _ := filepath.Match(pattern, filename); matchedPattern {
+				matched = true
+				break
+			}
+			// 尝试匹配相对路径（用于目录模式如 *.go）
+			if strings.Contains(pattern, "/") {
+				rel, _ := filepath.Rel(rootPath, path)
+				// 将Windows路径分隔符转换为正斜杠以匹配模式
+				rel = filepath.ToSlash(rel)
+				if matchedPattern, _ := filepath.Match(pattern, rel); matchedPattern {
+					matched = true
+					break
+				}
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+
+	// 检查排除模式
+	if len(options.ExcludePatterns) > 0 {
+		filename := filepath.Base(path)
+		for _, pattern := range options.ExcludePatterns {
+			// 尝试匹配文件名
+			if matchedPattern, _ := filepath.Match(pattern, filename); matchedPattern {
+				return false
+			}
+			// 尝试匹配相对路径（用于目录模式如 .git/）
+			if strings.Contains(pattern, "/") {
+				rel, _ := filepath.Rel(rootPath, path)
+				// 将Windows路径分隔符转换为正斜杠以匹配模式
+				rel = filepath.ToSlash(rel)
+
+				if matchedPattern, _ := filepath.Match(pattern, rel); matchedPattern {
+					return false
+				}
+				// 对于目录模式（以/结尾），检查文件是否在匹配目录下
+				if strings.HasSuffix(pattern, "/") {
+					dirPattern := strings.TrimSuffix(pattern, "/")
+					// 检查相对路径是否以目录模式开头
+					if strings.HasPrefix(rel, dirPattern+"/") {
+						return false
+					}
+					// 检查路径中的任何目录部分是否匹配
+					pathDirs := strings.Split(rel, "/")
+					for i, dir := range pathDirs {
+						if matchedDir, _ := filepath.Match(dirPattern, dir); matchedDir {
+							// 确保这是完整目录名匹配，而不是部分匹配
+							if i < len(pathDirs)-1 || rel == dirPattern {
+								return false
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return true
 }
